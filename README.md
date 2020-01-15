@@ -1,2 +1,2 @@
 # cubix
-game
+a cool game

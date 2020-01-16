@@ -13,7 +13,7 @@ WINDOWS_WIDTH = 1000
 WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
 SPRITE_FOLDER_ROUTE = '../sprites/'
-MUSIC_AND_SOUNDTRACK_ROUTE = '../music and soundtrack/'
+MUSIC_AND_SOUNDTRACK_ROUTE = '../ost/'
 MAIN_THEME_NAME = 'forsaken dreams by edgy.mpeg'
 
 # colors
@@ -38,17 +38,18 @@ def check_alive(player):  # Check if the player is alive and returns the answer
 
 
 def death(player, player_list, object_id,
-          status_list):  # Makes the player die and creates a ghost particle of the player
+          status_list, particle_list):  # Makes the player die and creates a ghost particle of the player
     print('zzz')
     pos = player.get_pos()
     ghost = PlayerGhost(pos[0] - 93, pos[1] - 53, object_id, player.image_num)
     object_id += 1
     if not player.facing_right:
         ghost.facing_right = False
+    particle_list.append(ghost)
     new_status('new', ghost, status_list)
     player_list.remove(player)
     new_status('dead', player, status_list)
-    return ghost
+    return object_id
     # End death
 
 
@@ -88,7 +89,7 @@ def update_players(player_list, list_of_lists,
         pos = player.get_pos()
         player.check_death_zone()
         if check_alive(player):
-            list_of_lists[1].append(death(player, player_list, object_id, status_list))
+            object_id = death(player, player_list, object_id, status_list, list_of_lists[1])
         player.hard_fall()
         player.correct_a()
         player.correct_v()
@@ -101,6 +102,8 @@ def update_players(player_list, list_of_lists,
         player.sync_test_rect()
         if pos != player.get_pos():
             new_status('update', player, status_list)
+
+        print(player.get_v())
 
     return object_id
     # End update_player

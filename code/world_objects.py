@@ -160,7 +160,7 @@ class WorldObject(object):  # Class for every physical object in the game
                     return (main_object.rect.x + main_object.size_x + other_object.rect.x) // 2 - 1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
-            else:  # colliding with an object that is moving away from the main object
+            '''else:  # colliding with an object that is moving away from the main object
                 main_object.rect.x += main_object.__vx
                 other_object.rect.x += other_object.__vx
                 if main_object.rect.colliderect(other_object.rect):
@@ -168,7 +168,7 @@ class WorldObject(object):  # Class for every physical object in the game
                     other_object.rect.x -= other_object.__vx
                     return other_object.rect.x - main_object.rect.x - main_object.size_x - 1
                 main_object.sync_test_rect()
-                other_object.sync_test_rect()
+                other_object.sync_test_rect()'''
 
         if main_object.__vx < 0:
             main_object.rect.x -= 1
@@ -180,7 +180,7 @@ class WorldObject(object):  # Class for every physical object in the game
                 main_object.rect.x += main_object.__vx
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
-                    return other_object.rect.x + main_object.x + main_object.size_x + 1
+                    return other_object.rect.x + other_object.size_x - main_object.rect.x + 1
                 main_object.sync_test_rect()
             elif other_object.__vx > 0:  # colliding with an object that is moving towards the main object
                 main_object.rect.x += main_object.__vx
@@ -188,10 +188,10 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
                     other_object.rect.x -= other_object.__vx
-                    return ((other_object.rect.x + other_object.size_x + main_object.rect.x) // 2 - 1) * 1
+                    return ((other_object.rect.x + other_object.size_x + main_object.rect.x) // 2 - 1) * -1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
-            else:  # colliding with an object that is moving away from the main object
+            '''else:  # colliding with an object that is moving away from the main object
                 main_object.rect.x += main_object.__vx
                 other_object.rect.x += other_object.__vx
                 if main_object.rect.colliderect(other_object.rect):
@@ -199,7 +199,7 @@ class WorldObject(object):  # Class for every physical object in the game
                     other_object.rect.x -= other_object.__vx
                     return (main_object.rect.x - other_object.rect.x - other_object.size_x - 1) * 1
                 main_object.sync_test_rect()
-                other_object.sync_test_rect()
+                other_object.sync_test_rect()'''
 
         return self.__vx
         # End prevent_overlap_x
@@ -251,7 +251,7 @@ class WorldObject(object):  # Class for every physical object in the game
                 main_object.rect.y += main_object.__vy
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
-                    return other_object.rect.y + main_object.y + main_object.size_y + 1
+                    return other_object.rect.y + other_object.size_y - main_object.rect.y + 1
                 main_object.sync_test_rect()
             elif other_object.__vy > 0:  # colliding with an object that is moving towards the main object
                 main_object.rect.y += main_object.__vy
@@ -259,7 +259,7 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return ((other_object.rect.y + other_object.size_y + main_object.rect.y) // 2 - 1) * 1
+                    return ((other_object.rect.y + other_object.size_y + main_object.rect.y) // 2 - 1) * -1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
             else:  # colliding with an object that is moving away from the main object
@@ -268,7 +268,7 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return (main_object.rect.y - other_object.rect.y - other_object.size_y - 1) * 1
+                    return (main_object.rect.y - other_object.rect.y - other_object.size_y - 1) * -1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
 

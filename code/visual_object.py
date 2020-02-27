@@ -13,16 +13,18 @@ SPRITE_FOLDER_ROUTE = '../sprites/'
 
 class VisualObject(object):  # Class for the visuallity of the object
 
-    def __init__(self, sprite_name, colorkey, x, y, object_id, is_particle):
+    def __init__(self, sprite_name, colorkey, x, y, object_id, is_particle, facing_right):
         super().__init__()
         self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + sprite_name).convert()
         self.image.set_colorkey(colorkey)
         self.sprite_name = sprite_name
         self.colorkey = colorkey
+        if not facing_right:
+            self.image = pygame.transform.flip(self.image, True, False)
 
         self.x = x
         self.y = y
-        self.facing_right = True
+        self.facing_right = facing_right
         self.is_particle = is_particle
 
         self.object_id = object_id

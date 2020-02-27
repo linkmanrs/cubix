@@ -8,11 +8,12 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 # Constants
-WINDOWS_WIDTH = 1000
+WINDOWS_WIDTH = 1100
 WINDOWS_HEIGHT = 700
 SPRITE_FOLDER_ROUTE = '../sprites/'
 GRAVITY_CONSTANT_DOWN = 15.0  # Gravity constant for when the object goes down or not moving
 GRAVITY_CONSTANT_UP = 12.0  # Gravity constant for when the object goes up
+FRICTION_CONSTANT_X = 1.0
 T = 1 / 60  # Time constant (Uses 60 times in one second)
 
 
@@ -86,8 +87,11 @@ class WorldObject(object):  # Class for every physical object in the game
         # End get_a
 
     def correct_v(self):  # Function for correcting the speed according to acceleration
-        self.__vx += self.__ax * T
-        self.__vy += self.__ay * T
+        if self.__vx > self.__ax:
+            self.__vx -= float(FRICTION_CONSTANT_X * T)
+        elif self.__vx < self.__ax:
+            self.__vx += float(FRICTION_CONSTANT_X * T)
+        self.__vy += float(self.__ay * T)
         # End correct_v
 
     def correct_a(self):  # Function for correcting the acceleration according to speed and gravity
@@ -129,7 +133,7 @@ class WorldObject(object):  # Class for every physical object in the game
 
     def hard_fall(self):  # Makes the object fall not in a floaty way
         v = self.get_v()[1]
-        if v >= -1 and v < 3:
+        if -1 <= v < 3:
             self.update_vy(3)
         # End hard_fall
 
@@ -139,7 +143,7 @@ class WorldObject(object):  # Class for every physical object in the game
         other_object = sprite.copy_object()
         other_object.sync_test_rect()
 
-        if main_object.__vx > 0:
+        if main_object.__vx > 0:  # Moving with positive speed
             main_object.rect.x += 1
             if main_object.rect.colliderect(other_object.rect):
                 return 0
@@ -157,20 +161,29 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
                     other_object.rect.x -= other_object.__vx
-                    return (main_object.rect.x + main_object.size_x + other_object.rect.x) // 2 - 1
+                    if (other_object.rect.x - (main_object.rect.x + main_object.size_x)) % 2 == 0:
+                        sprite.update_vx((other_object.rect.x - (main_object.rect.x + main_object.size_x)) * -1)
+                        return (other_object.rect.x - (main_object.rect.x + main_object.size_x)) // 2 - 1
+                    else:
+                        sprite.update_vx((other_object.rect.x - (main_object.rect.x + main_object.size_x)) * -1)
+                        return (other_object.rect.x - (main_object.rect.x + main_object.size_x)) // 2
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
-            '''else:  # colliding with an object that is moving away from the main object
+            else:  # colliding with an object that is moving away from the main object
                 main_object.rect.x += main_object.__vx
                 other_object.rect.x += other_object.__vx
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
                     other_object.rect.x -= other_object.__vx
-                    return other_object.rect.x - main_object.rect.x - main_object.size_x - 1
+                    if other_object.rect.x > main_object.rect.x:
+                        return other_object.rect.x - (main_object.rect.x + main_object.size_x) - 1
+                    else:
+                        sprite.update_vx(main_object.rect.x - (other_object.rect.x + other_object.size_x) - 1)
+                        return self.__vx
                 main_object.sync_test_rect()
-                other_object.sync_test_rect()'''
+                other_object.sync_test_rect()
 
-        if main_object.__vx < 0:
+        if main_object.__vx < 0:  # Moving with negative speed
             main_object.rect.x -= 1
             if main_object.rect.colliderect(other_object.rect):
                 return 0
@@ -188,18 +201,27 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
                     other_object.rect.x -= other_object.__vx
-                    return ((other_object.rect.x + other_object.size_x + main_object.rect.x) // 2 - 1) * -1
+                    if (main_object.rect.x - (other_object.rect.x + other_object.size_x)) % 2 == 0:
+                        sprite.update_vx((main_object.rect.x - (other_object.rect.x + other_object.size_x)))
+                        return ((main_object.rect.x - (other_object.rect.x + other_object.size_x)) // 2 + 1) * -1
+                    else:
+                        sprite.update_vx((main_object.rect.x - (other_object.rect.x + other_object.size_x)))
+                        return ((main_object.rect.x - (other_object.rect.x + other_object.size_x)) // 2) * -1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
-            '''else:  # colliding with an object that is moving away from the main object
+            else:  # colliding with an object that is moving away from the main object
                 main_object.rect.x += main_object.__vx
                 other_object.rect.x += other_object.__vx
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.x -= main_object.__vx
                     other_object.rect.x -= other_object.__vx
-                    return (main_object.rect.x - other_object.rect.x - other_object.size_x - 1) * 1
+                    if other_object.rect.x < main_object.rect.x:
+                        return (main_object.rect.x - (other_object.rect.x + other_object.size_x) - 1) * -1
+                    else:
+                        sprite.update_vx((other_object.rect.x - (main_object.rect.x + main_object.size_x) - 1) * -1)
+                        return self.__vx
                 main_object.sync_test_rect()
-                other_object.sync_test_rect()'''
+                other_object.sync_test_rect()
 
         return self.__vx
         # End prevent_overlap_x
@@ -210,7 +232,7 @@ class WorldObject(object):  # Class for every physical object in the game
         other_object = sprite.copy_object()
         other_object.sync_test_rect()
 
-        if main_object.__vy > 0:
+        if main_object.__vy > 0:  # Moving with positive speed
             main_object.rect.y += 1
             if main_object.rect.colliderect(other_object.rect):
                 return 0
@@ -228,7 +250,12 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return (main_object.rect.y + main_object.size_y + other_object.rect.y) // 2 - 1
+                    if (other_object.rect.y - (main_object.rect.y + main_object.size_y)) % 2 == 0:
+                        sprite.update_vy((other_object.rect.y - (main_object.rect.y + main_object.size_y)) * -1)
+                        return (other_object.rect.y - (main_object.rect.y + main_object.size_y)) // 2 - 1
+                    else:
+                        sprite.update_vy((other_object.rect.y - (main_object.rect.y + main_object.size_y)) * -1)
+                        return (other_object.rect.y - (main_object.rect.y + main_object.size_y)) // 2
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
             else:  # colliding with an object that is moving away from the main object
@@ -237,11 +264,15 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return other_object.rect.y - main_object.rect.y - main_object.size_y - 1
+                    if other_object.rect.y > main_object.rect.y:
+                        return other_object.rect.y - (main_object.rect.y + main_object.size_y) - 1
+                    else:
+                        sprite.update_vy(main_object.rect.y - (other_object.rect.y + other_object.size_y) - 1)
+                        return self.__vy
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
 
-        if main_object.__vy < 0:
+        if main_object.__vy < 0:  # Moving with negative speed
             main_object.rect.y -= 1
             if main_object.rect.colliderect(other_object.rect):
                 return 0
@@ -259,7 +290,12 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return ((other_object.rect.y + other_object.size_y + main_object.rect.y) // 2 - 1) * -1
+                    if (main_object.rect.y - (other_object.rect.y + other_object.size_y)) % 2 == 0:
+                        sprite.update_vy((main_object.rect.y - (other_object.rect.y + other_object.size_y)))
+                        return ((main_object.rect.y - (other_object.rect.y + other_object.size_y)) // 2 + 1) * -1
+                    else:
+                        sprite.update_vy((main_object.rect.y - (other_object.rect.y + other_object.size_y)))
+                        return ((main_object.rect.y - (other_object.rect.y + other_object.size_y)) // 2) * -1
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
             else:  # colliding with an object that is moving away from the main object
@@ -268,7 +304,11 @@ class WorldObject(object):  # Class for every physical object in the game
                 if main_object.rect.colliderect(other_object.rect):
                     main_object.rect.y -= main_object.__vy
                     other_object.rect.y -= other_object.__vy
-                    return (main_object.rect.y - other_object.rect.y - other_object.size_y - 1) * -1
+                    if other_object.rect.y < main_object.rect.y:
+                        return (main_object.rect.y - (other_object.rect.y + other_object.size_y) - 1) * -1
+                    else:
+                        sprite.update_vy((other_object.rect.y - (main_object.rect.y + main_object.size_y) - 1) * -1)
+                        return self.__vy
                 main_object.sync_test_rect()
                 other_object.sync_test_rect()
 

@@ -233,3 +233,7 @@ def paint_lists(screen, status_list):  # Calls paint_objects for every list in l
     paint_objects(screen, status_list[0])
     paint_objects(screen, status_list[2])
     # End paint_lists
+
+def player_input(event):  # Returns the key that was pushed down
+    return event.key
+    # End input

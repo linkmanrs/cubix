@@ -35,6 +35,7 @@ class WorldObject(object):  # Class for every physical object in the game
             self.__ay = GRAVITY_CONSTANT_DOWN
         else:
             self.__ay = 0
+        self.state = ''  # A variable for the state of the player (for the animation)
         self.facing_right = True  # Right = True
         self.rect = pygame.Rect(int(x), int(y), size_x, size_y)
 
@@ -44,14 +45,17 @@ class WorldObject(object):  # Class for every physical object in the game
         # self.visual = VisualObject(sprite_name, colorkey, x, y, object_id)
         # End __init__
 
-    def update_loc(self):  # Function for updating location according to speed
+    def update_loc_x(self):  # Function for updating location on the x axis according to speed
         self.x += self.__vx
         if self.x + self.size_x > WINDOWS_WIDTH - 1:  # Prevent object from going off screen
             self.x = WINDOWS_WIDTH - self.size_x
         elif self.x < 0:
             self.x = 0
+        # End update_loc_x
+
+    def update_loc_y(self):  # Function for updating location on the y axis according to speed
         self.y += self.__vy
-        # End update_loc
+        # End update_loc_y
 
     def update_vx(self, vx):  # Function for updating speed
         self.__vx = vx

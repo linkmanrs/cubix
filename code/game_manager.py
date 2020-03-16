@@ -170,7 +170,7 @@ def main():
     command_list = ['log in', 'sign up']
     send_message(command_list, client_socket)
 
-    logged_in, user_id = choose_command_at_enterence(cubix_cursor, client_socket, command)
+    logged_in, user_id = choose_command_at_enterence(cubix_cursor, client_socket)
     if logged_in:
         command_list = ['get status', 'play game']
         send_message(command_list, client_socket)

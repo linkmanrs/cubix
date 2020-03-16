@@ -50,6 +50,19 @@ class Player(WorldObject):  # Player class
             self.health = 0
         # End check_death_zone
 
+    def correct_state(self):  # Corrects the state of the player according to his speed
+        speed_x = self.get_v()[0]
+        speed_y = self.get_v()[1]
+        if speed_x == 0 and speed_y == 0:
+            self.state = 'idle'
+        elif speed_y > 0:
+            self.state = 'falling'
+        elif speed_y < 0:
+            self.state = 'rising'
+        elif speed_x != 0:
+            self.state = 'moving'
+        # End correct_state
+
     def move_left(self):  # Makes the player move left
         self.update_vx(-PLAYER_SPEED)
         # End move_left

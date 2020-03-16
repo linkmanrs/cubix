@@ -1,6 +1,7 @@
 __author__ = 'Roy'
 
 import random
+import time
 import pygame
 import socket
 import msgpack
@@ -70,7 +71,7 @@ def main_physical_game(clock, client_list):  # Main physical game
             finish = True
 
         # End of main loop
-    print('game ended')
+    return client_list[0]
     # End main_physical_game
 
 
@@ -127,7 +128,8 @@ def new_status(status, sprite, global_var):  # creates a new status and adds it 
                            sprite.object_id, sprite.is_particle, sprite.facing_right]
         global_var.status_list.append(new_status_list)
     elif status == 'update':
-        new_status_list = ['update', sprite.object_id, sprite.get_pos()[0], sprite.get_pos()[1], sprite.facing_right]
+        new_status_list = ['update', sprite.object_id, sprite.get_pos()[0], sprite.get_pos()[1], sprite.facing_right,
+                           sprite.state]
         global_var.status_list.append(new_status_list)
     elif status == 'dead':
         new_status_list = ['dead', sprite.object_id]
@@ -176,29 +178,23 @@ def manage_event(global_var, event, client, client_list):  # Manages the events 
         for player in global_var.player_list:
             if player.object_id == client.player_id:
                 if event.type == pygame.QUIT:
-                    # new_quit_status(global_var)
                     player_left(global_var, player, client, client_list)
                 else:
                     manage_pressed_buttons(player, event, global_var)
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        # new_quit_status(global_var)
                         player_left(global_var, player, client, client_list)
             else:
                 if event.type == pygame.QUIT:
-                    # new_quit_status(global_var)
                     player_left(global_var, None, client, client_list)
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        # new_quit_status(global_var)
                         player_left(global_var, None, client, client_list)
     else:
         if event.type == pygame.QUIT:
-            # new_quit_status(global_var)
             player_left(global_var, None, client, client_list)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                # new_quit_status(global_var)
                 player_left(global_var, None, client, client_list)
     # End manage_event
 
@@ -259,9 +255,9 @@ def update_players(global_var):  # Function that contains all the necessary upda
 
         manage_collision(player, global_var)
 
+        player.correct_state()
         player.check_facing()
 
-        player.update_loc()
         player.sync_test_rect()
         if pos != player.get_pos():
             new_status('update', player, global_var)
@@ -298,7 +294,7 @@ def manage_cooldown(player):  # Manages the cooldown parameter
     # End manage_cooldown
 
 
-def manage_collision(player, global_var):  # Manages the collision protocol
+def manage_collision(player, global_var):  # Manages the collision protocol and updates the location
     for i in range(5):
         if i != 1 and i != 4:  # Only checks the lists that are needed to be checked
             if player.get_v()[0] > 0:
@@ -313,6 +309,10 @@ def manage_collision(player, global_var):  # Manages the collision protocol
                         v = player.prevent_overlap_x(sprite)
                         if v > player.get_v()[0]:
                             player.update_vx(v)
+    player.update_loc_x()
+
+    for i in range(5):
+        if i != 1 and i != 4:  # Only checks the lists that are needed to be checked
             if player.get_v()[1] > 0:
                 for sprite in global_var.list_of_lists[i]:
                     if sprite is not player:
@@ -325,6 +325,7 @@ def manage_collision(player, global_var):  # Manages the collision protocol
                         v = player.prevent_overlap_y(sprite)
                         if v > player.get_v()[1]:
                             player.update_vy(v)
+    player.update_loc_y()
     # End manage_collision
 
 
@@ -369,174 +370,6 @@ def kill_object(sprite, sprite_list, global_var):  # Removing the object from th
     sprite_list.remove(sprite)
     new_status('dead', sprite, global_var)
     # End kill_object
-
-
-def choose_command_at_enterence(cursor, client, username_list):  # Let the user pick the action he wants to do
-    command = receive_message(client)
-    action = {
-        'sign up': register_user,
-        'log in': sign_in
-    }
-    if not action.get(command) is None:
-        return action.get(command)(cursor, client, username_list)
-    else:
-        return False, None
-    # End choose_action
-
-
-def register_user(cubix_cursor, client, username_list):  # Registers a user to the database
-    new_user_id = cubix_cursor.execute('SELECT max(ID) FROM users').fetchone()[0] + 1
-    chose_name = False
-    username = ''
-    while not chose_name:
-        username = receive_message(client)
-        exist = False
-        for name in username_list:  # Checks if the username already exists in the database
-            if name[0] == username:
-                exist = True
-        if exist:
-            send_message('username already exists, choose another', client)
-        else:
-            send_message('username accepted', client)
-            chose_name = True
-    password = receive_message(client)
-    hash_db, salt = hash_password(password)
-    data = [new_user_id, username, hash_db, salt]
-    cubix_cursor.execute('INSERT INTO users VALUES(?,?,?,?,0,0)', data)
-    send_message('user registered and logged in', client)
-    return True, new_user_id
-    # End register_user
-
-
-def sign_in(cubix_cursor, client, username_list):  # lets the user try to sign in
-    selected_name = False
-    username = ''
-    while not selected_name:
-        username = receive_message(client)
-        exist = False
-        for name in username_list:  # Checks if the username already exists in the database
-            if name[0] == username:
-                exist = True
-        if exist:
-            send_message('username accepted', client)
-            selected_name = True
-        else:
-            send_message('username doesnt exist', client)
-
-    tries = 3
-    accepted = False
-    user_hash = cubix_cursor.execute('SELECT hash FROM users WHERE username=?', [username]).fetchone()[0]
-    user_salt = cubix_cursor.execute('SELECT salt FROM users WHERE username=?', [username]).fetchone()[0]
-    while tries > 0 and not accepted:
-        password = receive_message(client)
-        if verify_password(user_hash, user_salt, password):
-            send_message('password accepted', client)
-            accepted = True
-        else:
-            tries -= 1
-            if tries > 0:
-                send_message('that the wrong password!', client)
-            else:
-                send_message('DENIED!, too many tries were used', client)
-    user_id = None
-    if accepted:
-        user_id = cubix_cursor.execute('SELECT ID FROM users WHERE username=?', [username]).fetchone()[0]
-        send_message('you are now logged in', client)
-    else:
-        send_message('try to remember the password next time', client)
-    return accepted, user_id
-    # End sign_in
-
-
-def hash_password(password):  # hashing the password and creating a salt (returning both)
-    salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
-    password_hash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), salt, 100000)
-    password_hash = binascii.hexlify(password_hash)
-    password_hash = password_hash.decode('ascii')
-    salt = salt.decode('ascii')
-    return password_hash, salt
-    # End hash_password
-
-
-def verify_password(stored_password, salt, provided_password):  # checking if the given password is correct
-    password_hash = hashlib.pbkdf2_hmac('sha512', provided_password.encode('utf-8'), salt.encode('ascii'), 100000)
-    password_hash = binascii.hexlify(password_hash).decode('ascii')
-    return password_hash == stored_password
-    # End verify_password
-
-
-def confirmation_count(client_list):
-    con_count = 0
-    for client in client_list:
-        if client.accepted is not None:
-            con_count += 1
-    return con_count
-    # End confirmation_count
-
-
-def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game
-    client_list = []
-
-    '''input_received = False
-    players_expected = ''
-    while not input_received:
-        players_expected = input("how many players expected? (a number between 1 - 4)")
-        if players_expected.isdecimal():
-            players_expected = int(players_expected)
-            if 1 <= players_expected <= 4:
-                input_received = True
-            else:
-                print('incorrect input')
-        else:
-            print('incorrect input')'''
-
-    cubix_server.listen(4)
-    read_list = [cubix_server]
-    client_id = 0
-    username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
-    while not confirmation_count(client_list) == 2:
-        readable, writable, errored = select.select(read_list, [], [])
-        for soc in readable:
-            if soc is cubix_server:
-                (client_socket, client_address) = cubix_server.accept()
-                new_client = ClientPlayer(client_id, client_socket, client_address)
-                client_list.append(new_client)
-                print("player found")
-                client_id += 1
-                read_list.append(client_socket)
-            else:
-                accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
-                for client in client_list:
-                    if client.client_socket is soc:
-                        client.accepted = accepted
-                        client.user_id = user_id
-                '''data = socket.recv(1024)
-                if data:
-                    socket.send(data)
-                else:
-                    socket.close()
-                    read_list.remove(socket)'''
-
-    for client in client_list:
-        if not client.accepted:
-            client_list.remove(client)
-            client.client_socket.close()
-
-    '''while client_id != players_expected:  # Collecting the players
-        print("waiting for more players")'''
-
-    print("all players are present")
-
-    character_list = ['cuby', 'sphery', 'triangly', 'penty']
-    for client in client_list:
-        send_status(character_list, client)
-        character = receive_message(client.client_socket)
-        client.chosen_character = character
-        character_list.remove(character)
-    print('characters are chosen and the game is ready!')
-
-    return client_list
-    # End collect_clients
 
 
 def create_power(player, global_var):  # Activates the players power
@@ -598,6 +431,249 @@ def manage_power(global_var):  # Manages the power list
     # End manage_power
 
 
+def choose_command_at_enterence(cursor, client, username_list):  # Let the user pick the action he wants to do
+    command = receive_message(client)
+    action = {
+        'sign up': register_user,
+        'log in': sign_in,
+        'exit': False
+    }
+    if not action.get(command) is None:
+        if action.get(command) is False:
+            return False, None
+        else:
+            return action.get(command)(cursor, client, username_list)
+    else:
+        return False, None
+    # End choose_action
+
+
+def register_user(cubix_cursor, client, username_list):  # Registers a user to the database
+    new_user_id = cubix_cursor.execute('SELECT max(ID) FROM users').fetchone()[0] + 1
+    chose_name = False
+    username = ''
+    while not chose_name:
+        username = receive_message(client)
+        if username == 'exit':
+            return False, None
+        exist = False
+        for name in username_list:  # Checks if the username already exists in the database
+            if name[0] == username:
+                exist = True
+        if exist:
+            send_message('username already exists, choose another', client)
+        else:
+            send_message('username accepted', client)
+            chose_name = True
+    password = receive_message(client)
+    if password == 'exit':
+        return False, None
+    hash_db, salt = hash_password(password)
+    data = [new_user_id, username, hash_db, salt]
+    cubix_cursor.execute('INSERT INTO users VALUES(?,?,?,?,0,0)', data)
+    send_message('user registerded and logged in', client)
+    return True, new_user_id
+    # End register_user
+
+
+def sign_in(cubix_cursor, client, username_list):  # lets the user try to sign in
+    tries = 3
+    username_accepted = False
+    password_accepted = False
+    username = ''
+    while tries > 0 and (not password_accepted or not username_accepted):
+        username = receive_message(client)
+        if username == 'exit':
+            return False, None
+        password = receive_message(client)
+        if password == 'exit':
+            return False, None
+        exist = False
+        for name in username_list:  # Checks if the username already exists in the database
+            if name[0] == username:
+                exist = True
+        if exist:
+            username_accepted = True
+            user_hash = cubix_cursor.execute('SELECT hash FROM users WHERE username=?', [username]).fetchone()[0]
+            user_salt = cubix_cursor.execute('SELECT salt FROM users WHERE username=?', [username]).fetchone()[0]
+            if verify_password(user_hash, user_salt, password):
+                send_message('user accepted', client)
+                password_accepted = True
+            else:
+                username_accepted = False
+                tries -= 1
+                if tries == 0:
+                    send_message('DENIED!, too many tries were used', client)
+                else:
+                    send_message('username or password are incorrect', client)
+        else:
+            tries -= 1
+            if tries == 0:
+                send_message('DENIED!, too many tries were used', client)
+            else:
+                send_message('username or password are incorrect', client)
+
+    user_id = None
+    if password_accepted and username_accepted:
+        user_id = cubix_cursor.execute('SELECT ID FROM users WHERE username=?', [username]).fetchone()[0]
+    return password_accepted and username_accepted, user_id
+    # End sign_in
+
+
+def hash_password(password):  # hashing the password and creating a salt (returning both)
+    salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
+    password_hash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), salt, 100000)
+    password_hash = binascii.hexlify(password_hash)
+    password_hash = password_hash.decode('ascii')
+    salt = salt.decode('ascii')
+    return password_hash, salt
+    # End hash_password
+
+
+def verify_password(stored_password, salt, provided_password):  # checking if the given password is correct
+    password_hash = hashlib.pbkdf2_hmac('sha512', provided_password.encode('utf-8'), salt.encode('ascii'), 100000)
+    password_hash = binascii.hexlify(password_hash).decode('ascii')
+    return password_hash == stored_password
+    # End verify_password
+
+
+def choose_command_after_logged(cursor, client, user_id):  # Let the user pick the action he wants to do
+    command = receive_message(client)
+    action = {
+        'get status': collect_status,
+        'play game': True,
+        'exit': False
+    }
+    if not action.get(command) is None:
+        if action.get(command) is False:
+            return False
+        elif action.get(command) is True:
+            return True
+        else:
+            return action.get(command)(user_id, cursor, client)
+    else:
+        return False
+    # End choose_action
+
+
+def collect_status(user_id, cubix_cursor, client):  # sends the status of the player
+    numgames = cubix_cursor.execute('SELECT numgames FROM users WHERE ID=?', [user_id]).fetchone()[0]
+    wins = cubix_cursor.execute('SELECT wins FROM users WHERE ID=?', [user_id]).fetchone()[0]
+    status = 'you played {} games and won {} games'.format(numgames, wins)
+    send_message(status, client)
+    still_playing = receive_message(client)
+    return still_playing
+    # End send_status
+
+
+def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game
+    client_list = []
+
+    cubix_server.listen(4)
+    read_list = [cubix_server]
+    client_id = 0
+    confirmation_count = 0
+    username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
+    while confirmation_count != 1:
+        readable, writable, errored = select.select(read_list, [], [])
+        for soc in readable:
+            if soc is cubix_server:
+                (client_socket, client_address) = cubix_server.accept()
+                new_client = ClientPlayer(client_id, client_socket, client_address)
+                client_list.append(new_client)
+                client_id += 1
+                read_list.append(client_socket)
+            else:
+                accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
+                playing = False
+                if accepted:
+                    playing = choose_command_after_logged(cubix_cursor, soc, user_id)
+                for client in client_list:
+                    if client.client_socket is soc:
+                        if accepted:
+                            client.user_id = user_id
+                            client.user_name = \
+                                cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
+                            client.playing = playing
+                            if not playing:
+                                client.accepted = False
+                            else:
+                                client.accepted = accepted
+                confirmation_count += 1
+
+    for client in client_list:
+        if not client.accepted:
+            client_list.remove(client)
+            client.client_socket.close()
+
+    num_rounds = 0
+    if len(client_list) != 0:
+        client_list[0].is_game_ruler = True  # Sets the first client as the game ruler
+
+        num_rounds = choose_rounds(client_list)
+
+        choose_character(client_list)
+
+    return client_list, num_rounds
+    # End collect_clients
+
+
+def choose_rounds(client_list):  # Letting only the game ruler to choose how many rounds the players will play
+    for client in client_list:
+        if client.is_game_ruler:
+            send_message('you are the game ruler! decide how many rounds you will play', client.client_socket)
+        else:
+            send_message('you are not the game ruler :( please wait for his decision', client.client_socket)
+
+    num_rounds = 0
+    while num_rounds == 0:
+        for client in client_list:
+            message = receive_message(client.client_socket)
+            if message == 'exit':
+                client_list.remove(client)
+                client.client_socket.close()
+            elif message == 'exit ruler':  # If the game ruler quits there will be only one round
+                client_list.remove(client)
+                client.client_socket.close()
+                num_rounds = 1
+            elif message != 'waiting':
+                num_rounds = message
+
+    for client in client_list:
+        if not client.is_game_ruler:
+            send_message(num_rounds, client.client_socket)
+    return num_rounds
+    # End choose_rounds
+
+
+def choose_character(client_list):
+    character_list = ['cuby', 'sphery', 'triangly', 'penty']
+    for client in client_list:
+        send_status(character_list, client)
+        character = receive_message(client.client_socket)
+        if character == 'exit':
+            client_list.remove(client)
+            client.client_socket.close()
+        else:
+            client.chosen_character = character
+            character_list.remove(character)
+    # End choose_character
+
+
+def send_winner(client_list):  # Sends the winner of the game to the clients
+    game_winner = ''
+    most_wins = 0
+    for client in client_list:
+        if client.wins > most_wins:
+            most_wins = client.wins
+            game_winner = client.user_name
+        elif client.wins == most_wins:
+            game_winner += ' and ' + client.user_name
+    for client in client_list:
+        send_message(game_winner, client.client_socket)
+    # End send_winner
+
+
 def main():
     cubix_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cubix_server.bind(('0.0.0.0', 6565))
@@ -606,22 +682,54 @@ def main():
 
     cubix_cursor = cubix_database.cursor()
 
-    client_list = collect_clients(cubix_server, cubix_cursor)
+    client_list, num_rounds = collect_clients(cubix_server, cubix_cursor)
 
+    game_client_list = client_list.copy()
     if len(client_list) >= 2:
         for client in client_list:
             send_message('The game is ready', client.client_socket)
         # Adding clock
         clock = pygame.time.Clock()
 
-        main_physical_game(clock, client_list)
+        while num_rounds != 0:
+            num_rounds -= 1
+            if len(game_client_list) >= 2:
+                new_game_id = cubix_cursor.execute('SELECT max(ID) FROM games').fetchone()[0] + 1
+                date = time.asctime()
+
+                winner = main_physical_game(clock, game_client_list)
+
+                winner.wins += 1
+                players = ''
+                for client in client_list:
+                    players += client.user_name + ', '
+                players = players[:-2]
+
+                game_data = [new_game_id, date, players, winner.user_name]
+                cubix_cursor.execute('INSERT INTO games VALUES(?,?,?,?)', game_data)
+
+                for client in client_list:  # Updates the users database
+                    numgames = \
+                        cubix_cursor.execute('SELECT numgames FROM users WHERE ID=?', [client.user_id]).fetchone()[
+                            0] + 1
+                    wins = cubix_cursor.execute('SELECT wins FROM users WHERE ID=?', [client.user_id]).fetchone()[0]
+                    if client is winner:
+                        wins += 1
+                    cubix_cursor.execute('''UPDATE users
+                    SET numgames = ?,
+                        wins = ?
+                    WHERE ID = ?''', [numgames, wins, client.user_id])
+        send_winner(client_list)
     else:
         for client in client_list:
             send_message('Not enough players are present', client.client_socket)
 
-    for client in client_list:
+    cubix_database.commit()
+
+    for client in game_client_list:
         client.client_socket.close()
     cubix_server.close()
+    cubix_database.close()
 
 
 if __name__ == '__main__':

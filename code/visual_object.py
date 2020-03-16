@@ -24,6 +24,8 @@ class VisualObject(object):  # Class for the visuallity of the object
 
         self.x = x
         self.y = y
+        self.state = ''
+        self.moving_frame_num = 0
         self.facing_right = facing_right
         self.is_particle = is_particle
 
@@ -44,3 +46,23 @@ class VisualObject(object):  # Class for the visuallity of the object
             self.image = pygame.transform.flip(self.image, True, False)
             self.facing_right = facing
         # End correct_facing
+
+    def update_state(self, state):  # updates the state of the player
+        self.state = state
+        # End update_state
+
+    def correct_state(self):  # A function that will change the image on the player according to his state (animation)
+        if self.state == 'moving':
+            if self.moving_frame_num == 3:
+                self.moving_frame_num = 0
+            self.image = pygame.image.load(
+                SPRITE_FOLDER_ROUTE + self.sprite_name + self.state + self.moving_frame_num).convert()
+            self.image.set_colorkey(self.colorkey)
+            self.moving_frame_num += 1
+        else:
+            self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + self.sprite_name + self.state).convert()
+            self.image.set_colorkey(self.colorkey)
+            self.moving_frame_num = 0
+        if not self.facing_right:
+            self.image = pygame.transform.flip(self.image, True, False)
+        # End correct_state

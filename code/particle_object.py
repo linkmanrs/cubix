@@ -37,6 +37,7 @@ class Particle(object):  # Class for every particle object in the game
 
         self.sprite_name = sprite_name
         self.colorkey = colorkey
+        self.state = ''  # A variable for the state of the player (for the animation)
         self.facing_right = True  # Right = True
         # self.visual = VisualObject(sprite_name, colorkey, x, y)
         # End __init__

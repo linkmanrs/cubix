@@ -237,3 +237,126 @@ def paint_lists(screen, status_list):  # Calls paint_objects for every list in l
 def player_input(event):  # Returns the key that was pushed down
     return event.key
     # End input
+
+'''def confirmation_count(client_list):
+    con_count = 0
+    for client in client_list:
+        if client.accepted is not None:
+            con_count += 1
+    return con_count
+    # End confirmation_count'''
+
+'''if message != 'you are the game ruler! decide how many rounds you will play':
+            rounds = receive_message(client)'''
+
+    '''if message == 'you are the game ruler! decide how many rounds you will play':
+        rounds = -1
+        while rounds <= 0:
+            rounds = int(input(message))
+            if rounds > 0:
+                send_message(rounds, client)
+            else:
+                print('invalid number try again')
+    else:
+        print(message)'''
+
+'''still_playing = input('do you still want to play the game? (yes or no)')
+        if still_playing == 'yes':
+            send_message(True, client)
+            return True
+        elif still_playing == 'no':
+            send_message(False, client)
+            return False
+        else:
+            print('invalid answer, exiting program')
+            send_message(False, client)
+            return False'''
+
+'''accepted = False
+    while not accepted:
+        user_name = input('please enter your username')
+        if user_name != '':
+            send_message(str(user_name), client)
+            response = receive_message(client)
+            print(response)
+            if response == 'username accepted':
+                accepted = True
+        else:
+            print('invalid user name')
+
+    accepted = False
+    blocked = False
+    while not accepted and not blocked:
+        password = input('please enter your password')
+        if password != '':
+            send_message(str(password), client)
+            response = receive_message(client)
+            print(response)
+            if response == 'password accepted':
+                accepted = True
+            elif response == 'DENIED!, too many tries were used':
+                blocked = True
+        else:
+            send_message('invalid password', client)
+
+    if accepted:
+        print(receive_message(client))'''
+
+'''chose_pass = False
+    while not chose_pass:
+        password = input('please enter your password')
+        if password != '':
+            send_message(str(password), client)
+            chose_pass = True
+        else:
+            print('invalid password')
+    print(receive_message(client))'''
+
+'''chose_name = False
+    while not chose_name:
+        user_name = input('please enter your username')
+        if user_name != '':
+            send_message(str(user_name), client)
+            response = receive_message(client)
+            print(response)
+            if response == 'username accepted':
+                chose_name = True
+        else:
+            print('invalid user name')'''
+
+'''print('please choose one of these actions:')
+    command_list = ['log in', 'sign up']
+    command = input(command_list)'''
+
+'''chose_character = False
+    character = ''
+    character_list = receive_status(cubix_client)
+    while not chose_character:
+        print('choose your character:')
+        character = input(character_list)
+        if character in character_list:
+            send_message(character, cubix_client)
+            chose_character = True
+        elif character == 'aa':
+            send_message(character_list[0], cubix_client)
+            chose_character = True
+        else:
+            print('invalid character name')
+    print('character chosen: ' + str(character))'''
+
+'''print('please choose one of these actions:')
+    command_list = ['get status', 'play game']
+    command = input(command_list)'''
+
+'''while tries > 0 and not password_accepted:
+        password = receive_message(client)
+        if verify_password(user_hash, user_salt, password):
+            send_message('password accepted', client)
+            password_accepted = True
+        else:
+            tries -= 1
+            if tries > 0:
+                send_message('that the wrong password!', client)
+            else:
+                send_message('DENIED!, too many tries were used', client)'''
+

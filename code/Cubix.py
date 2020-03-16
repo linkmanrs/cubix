@@ -638,6 +638,12 @@ def choose_rounds(client_list):  # Letting only the game ruler to choose how man
                 num_rounds = 1
             elif message != 'waiting':
                 num_rounds = message
+            else:
+                send_message('still waiting', client.client_socket)
+
+    for client in client_list:
+        if not client.is_game_ruler:
+            send_message('done', client.client_socket)
 
     for client in client_list:
         if not client.is_game_ruler:

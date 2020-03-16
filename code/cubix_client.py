@@ -482,6 +482,9 @@ def choosing_rounds(client, screen,
                 return True, rounds
 
         send_message('waiting', client)
+        waiting = receive_message(client)
+        if waiting == 'done':
+            rounds = 0
 
         pygame.display.flip()
 

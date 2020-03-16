@@ -652,17 +652,35 @@ def choose_rounds(client_list):  # Letting only the game ruler to choose how man
     # End choose_rounds
 
 
-def choose_character(client_list):
+def choose_character(client_list):  # A function for choosing a character
     character_list = ['cuby', 'sphery', 'triangly', 'penty']
+    someone_choosing = False
+    everyone_chose = False
+    while not everyone_chose:
+        for client in client_list:
+            if not someone_choosing and client.chosen_character is None:
+                send_message(character_list, client.client_socket)
+                someone_choosing = True
+            else:
+                send_message('waiting', client.client_socket)
+
+        for client in client_list:
+            character = receive_message(client.client_socket)
+            if character == 'exit':
+                client_list.remove(client)
+                client.client_socket.close()
+                someone_choosing = False
+            elif character != 'waiting':
+                client.chosen_character = character
+                character_list.remove(character)
+                someone_choosing = False
+
+        everyone_chose = True
+        for client in client_list:
+            everyone_chose = everyone_chose and client.chosen_character is not None
+
     for client in client_list:
-        send_status(character_list, client)
-        character = receive_message(client.client_socket)
-        if character == 'exit':
-            client_list.remove(client)
-            client.client_socket.close()
-        else:
-            client.chosen_character = character
-            character_list.remove(character)
+        send_message('done', client.client_socket)
     # End choose_character
 
 

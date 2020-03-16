@@ -2,7 +2,7 @@ import pygame
 
 
 COLOR_INACTIVE = (181, 181, 181)
-COLOR_ACTIVE = (215, 215, 215)
+COLOR_ACTIVE = (0, 0, 0)
 
 
 class InputBox:

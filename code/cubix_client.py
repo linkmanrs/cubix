@@ -3,7 +3,6 @@ __author__ = 'Roy'
 import msgpack
 import socket
 import pygame
-import select
 from text_box import InputBox
 from visual_object import VisualObject
 
@@ -497,24 +496,39 @@ def choosing_rounds(client, screen,
 
 
 def choose_character(client, screen, clock):  # A function for choosing a character
-    character_list = receive_message(client)
-    chose_character = False
-    while not chose_character:
+    character_list = None
+    done = False
+    while not done:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 send_message('exit', client)
                 return False
 
+        message = receive_message(client)
+        if message != 'waiting' and message != 'done':
+            character_list = message
+
         screen.fill(WHITE)
 
-        display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
+        sent_message = False
+        if character_list is not None:
+            display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
 
-        pos_x = 1
-        for character in character_list:
-            if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
-                send_message(character, client)
-                chose_character = True
-            pos_x += 1
+            pos_x = 1
+            for character in character_list:
+                if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
+                    send_message(character, client)
+                    character_list = None
+                    sent_message = True
+                pos_x += 1
+        elif message == 'waiting':
+            display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, WINDOWS_HEIGHT / 2, False)
+
+        if not sent_message and message != 'done':
+            send_message('waiting', client)
+
+        if message == 'done':
+            done = True
 
         pygame.display.flip()
 

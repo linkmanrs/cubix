@@ -473,7 +473,6 @@ def register_user(cubix_cursor, client, username_list):  # Registers a user to t
     hash_db, salt = hash_password(password)
     data = [new_user_id, username, hash_db, salt]
     cubix_cursor.execute('INSERT INTO users VALUES(?,?,?,?,0,0)', data)
-    send_message('user registerded and logged in', client)
     return True, new_user_id
     # End register_user
 

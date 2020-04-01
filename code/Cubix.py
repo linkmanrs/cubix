@@ -22,6 +22,8 @@ from global_var import GlobalVariable
 WINDOWS_WIDTH = 1100
 WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
+MAXIMUM_CLIENTS = 1
+MINIMUM_PLAYERS = 0
 SPRITE_FOLDER_ROUTE = '../sprites/'
 MUSIC_AND_SOUNDTRACK_ROUTE = '../ost/'
 MAIN_THEME_NAME = 'forsaken dreams by edgy.mpeg'
@@ -67,7 +69,7 @@ def main_physical_game(clock, client_list):  # Main physical game
             send_status(global_var.status_list, client)
         global_var.status_list.clear()
 
-        if len(client_list) == 0:  # Ends the game if all the players left
+        if len(global_var.player_list) == MINIMUM_PLAYERS:  # Ends the game if all the players left
             finish = True
 
         # End of main loop
@@ -574,7 +576,7 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
     client_id = 0
     confirmation_count = 0
     username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
-    while confirmation_count != 1:
+    while confirmation_count != MAXIMUM_CLIENTS:
         readable, writable, errored = select.select(read_list, [], [])
         for soc in readable:
             if soc is cubix_server:
@@ -595,10 +597,7 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
                             client.user_name = \
                                 cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
                             client.playing = playing
-                            if not playing:
-                                client.accepted = False
-                            else:
-                                client.accepted = accepted
+                            client.accepted = playing
                 confirmation_count += 1
 
     for client in client_list:
@@ -652,17 +651,35 @@ def choose_rounds(client_list):  # Letting only the game ruler to choose how man
     # End choose_rounds
 
 
-def choose_character(client_list):
+def choose_character(client_list):  # A function for choosing a character
     character_list = ['cuby', 'sphery', 'triangly', 'penty']
+    someone_choosing = False
+    everyone_chose = False
+    while not everyone_chose:
+        for client in client_list:
+            if not someone_choosing and client.chosen_character is None:
+                send_message(character_list, client.client_socket)
+                someone_choosing = True
+            else:
+                send_message('waiting', client.client_socket)
+
+        for client in client_list:
+            character = receive_message(client.client_socket)
+            if character == 'exit':
+                client_list.remove(client)
+                client.client_socket.close()
+                someone_choosing = False
+            elif character != 'waiting':
+                client.chosen_character = character
+                character_list.remove(character)
+                someone_choosing = False
+
+        everyone_chose = True
+        for client in client_list:
+            everyone_chose = everyone_chose and client.chosen_character is not None
+
     for client in client_list:
-        send_status(character_list, client)
-        character = receive_message(client.client_socket)
-        if character == 'exit':
-            client_list.remove(client)
-            client.client_socket.close()
-        else:
-            client.chosen_character = character
-            character_list.remove(character)
+        send_message('done', client.client_socket)
     # End choose_character
 
 
@@ -691,7 +708,7 @@ def main():
     client_list, num_rounds = collect_clients(cubix_server, cubix_cursor)
 
     game_client_list = client_list.copy()
-    if len(client_list) >= 2:
+    if len(client_list) >= MINIMUM_PLAYERS:
         for client in client_list:
             send_message('The game is ready', client.client_socket)
         # Adding clock
@@ -699,7 +716,7 @@ def main():
 
         while num_rounds != 0:
             num_rounds -= 1
-            if len(game_client_list) >= 2:
+            if len(game_client_list) >= MINIMUM_PLAYERS:
                 new_game_id = cubix_cursor.execute('SELECT max(ID) FROM games').fetchone()[0] + 1
                 date = time.asctime()
 

@@ -37,6 +37,7 @@ class Player(WorldObject):  # Player class
         self.__max_health = MAX_HEALTH
         self.health = self.__max_health
         self.character = character
+        self.state = 'idle'
         self.power = DEFAULT_POWER
         self.max_cooldown = POWER_COOLDOWN
         self.cooldown = 0

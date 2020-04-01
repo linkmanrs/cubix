@@ -1,2 +1,2 @@
-print(max(5, 3))
+print('4' * 4)
 

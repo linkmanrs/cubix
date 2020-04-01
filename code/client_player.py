@@ -23,7 +23,7 @@ class ClientPlayer(object):  # Player class
         self.chosen_character = None  # The character the user chosen
         self.user_name = None  # The users username
         self.user_id = None  # The users id in the database
-        self.accepted = None  # A variable that determinds if the user logged in
+        self.accepted = None  # A variable that determined if the user logged in
         self.playing = False  # A variable that indicates if the user will play the game
         self.is_game_ruler = False  # A variable that indicates if the user is the game ruler
         self.wins = 0  # Number of wins is game

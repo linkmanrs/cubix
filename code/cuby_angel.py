@@ -24,6 +24,7 @@ GRAVITY = False
 class PlayerGhost(Particle):  # Players angel ghost particle class
 
     def __init__(self, x, y, object_id, character):
-        super().__init__(character + '_angel.png', COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)
+        super().__init__(character + '_angel.png', COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY,
+                         object_id)
         self.character = character
         # End __init__

@@ -3,7 +3,6 @@ __author__ = 'Roy'
 import msgpack
 import socket
 import pygame
-import select
 from text_box import InputBox
 from visual_object import VisualObject
 
@@ -56,13 +55,14 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
         clock.tick(REFRESH_RATE)
 
         # End of main loop
+    pygame.mixer.music.stop()
     # End main_visual_game
 
 
 def play_theme():  # Plays the main theme of the game
     pygame.mixer.init()
     pygame.mixer.music.load(MUSIC_AND_SOUNDTRACK_ROUTE + MAIN_THEME_NAME)
-    pygame.mixer.music.play()
+    pygame.mixer.music.play(-1)
     # End play_theme
 
 
@@ -123,10 +123,11 @@ def process_data(status_list, visual_list):  # Uses the data from the server to 
         }
 
         if not finish:
-            if action.get(status[0]) is True:
-                finish = True
-            else:
-                finish = action.get(status[0])(status, visual_list)
+            if action.get(status[0]) is not None:
+                if action.get(status[0]) is True:
+                    finish = True
+                else:
+                    finish = action.get(status[0])(status, visual_list)
     return finish
     # End process_data
 
@@ -250,7 +251,7 @@ def choose_command_at_enterence(client, screen, clock):  # Let the user pick the
 
 def sign_up(client, screen, clock):  # Registers a user to the database
 
-    box = InputBox(400, 500, 140, 32)
+    box = InputBox(400, 500, 140, 32, False)
     response = None
     chose_name = False
     while not chose_name:
@@ -283,6 +284,7 @@ def sign_up(client, screen, clock):  # Registers a user to the database
         pygame.display.flip()
         clock.tick(REFRESH_RATE)
 
+    box.is_password = True
     chose_pass = False
     while not chose_pass:
         for event in pygame.event.get():
@@ -317,8 +319,8 @@ def sign_up(client, screen, clock):  # Registers a user to the database
 
 
 def try_log(client, screen, clock):  # Trying to log in to the server
-    username_box = InputBox(200, 500, 140, 32)
-    password_box = InputBox(600, 500, 140, 32)
+    username_box = InputBox(200, 500, 140, 32, False)
+    password_box = InputBox(600, 500, 140, 32, True)
     box_list = [username_box, password_box]
     response = None
     error_message = None
@@ -430,11 +432,11 @@ def get_status(client, screen, clock):  # Gets the users status from the server
         display_text(screen, 'do you still want to play the game?', (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2) - 50,
                      False)
 
-        if button(screen, "yes", 220, 350, 100, 50, GREEN, LIGHT_GREEN):
+        if button(screen, "yes", 220, 450, 100, 50, GREEN, LIGHT_GREEN):
             still_playing = True
             finish = True
 
-        if button(screen, "no", 775, 350, 100, 50, RED, LIGHT_RED):
+        if button(screen, "no", 775, 450, 100, 50, RED, LIGHT_RED):
             still_playing = False
             finish = True
 
@@ -497,24 +499,39 @@ def choosing_rounds(client, screen,
 
 
 def choose_character(client, screen, clock):  # A function for choosing a character
-    character_list = receive_message(client)
-    chose_character = False
-    while not chose_character:
+    character_list = None
+    done = False
+    while not done:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 send_message('exit', client)
                 return False
 
+        message = receive_message(client)
+        if message != 'waiting' and message != 'done':
+            character_list = message
+
         screen.fill(WHITE)
 
-        display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
+        sent_message = False
+        if character_list is not None:
+            display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
 
-        pos_x = 1
-        for character in character_list:
-            if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
-                send_message(character, client)
-                chose_character = True
-            pos_x += 1
+            pos_x = 1
+            for character in character_list:
+                if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
+                    send_message(character, client)
+                    character_list = None
+                    sent_message = True
+                pos_x += 1
+        elif message == 'waiting':
+            display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, WINDOWS_HEIGHT / 2, False)
+
+        if not sent_message and message != 'done':
+            send_message('waiting', client)
+
+        if message == 'done':
+            done = True
 
         pygame.display.flip()
 

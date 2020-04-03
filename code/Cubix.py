@@ -22,8 +22,8 @@ from global_var import GlobalVariable
 WINDOWS_WIDTH = 1100
 WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
-MAXIMUM_CLIENTS = 1
-MINIMUM_PLAYERS = 0
+MAXIMUM_CLIENTS = 2
+MINIMUM_PLAYERS = 1
 SPRITE_FOLDER_ROUTE = '../sprites/'
 MUSIC_AND_SOUNDTRACK_ROUTE = '../ost/'
 MAIN_THEME_NAME = 'forsaken dreams by edgy.mpeg'
@@ -39,6 +39,9 @@ BLUE = (0, 0, 255)
 
 
 def main_physical_game(clock, client_list):  # Main physical game
+    for client in client_list:
+        event = receive_message(client.client_socket)
+        send_status([], client)
     global_var = GlobalVariable()
 
     make_players(global_var, client_list)
@@ -71,9 +74,10 @@ def main_physical_game(clock, client_list):  # Main physical game
 
         if len(global_var.player_list) == MINIMUM_PLAYERS:  # Ends the game if all the players left
             finish = True
-
+            for client in client_list:
+                send_status([['quit']], client)
         # End of main loop
-    return client_list[0]
+    return global_var.player_list[0]
     # End main_physical_game
 
 
@@ -599,7 +603,7 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
                             client.accepted = playing
                 confirmation_count += 1
 
-    for client in client_list:
+    for client in client_list[:]:
         if not client.accepted:
             client_list.remove(client)
             client.client_socket.close()
@@ -625,7 +629,7 @@ def choose_rounds(client_list):  # Letting only the game ruler to choose how man
 
     num_rounds = 0
     while num_rounds == 0:
-        for client in client_list:
+        for client in client_list[:]:
             message = receive_message(client.client_socket)
             if message == 'exit':
                 client_list.remove(client)
@@ -662,7 +666,7 @@ def choose_character(client_list):  # A function for choosing a character
             else:
                 send_message('waiting', client.client_socket)
 
-        for client in client_list:
+        for client in client_list[:]:
             character = receive_message(client.client_socket)
             if character == 'exit':
                 client_list.remove(client)
@@ -720,6 +724,11 @@ def main():
                 date = time.asctime()
 
                 winner = main_physical_game(clock, game_client_list)
+                client_winner = None
+                for client in client_list:
+                    if client.user_name == winner.user_name:
+                        client_winner = client
+                winner = client_winner
 
                 winner.wins += 1
                 players = ''

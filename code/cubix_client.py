@@ -492,7 +492,7 @@ def choosing_rounds(client, screen,
 
         clock.tick(REFRESH_RATE)
 
-    if message == 'you are the game ruler! decide how many rounds you will play':
+    if message != 'you are the game ruler! decide how many rounds you will play':
         rounds = receive_message(client)
     return True, rounds
     # End choosing_rounds
@@ -508,30 +508,30 @@ def choose_character(client, screen, clock):  # A function for choosing a charac
                 return False
 
         message = receive_message(client)
-        if message != 'waiting' and message != 'done':
-            character_list = message
-
-        screen.fill(WHITE)
-
-        sent_message = False
-        if character_list is not None:
-            display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
-
-            pos_x = 1
-            for character in character_list:
-                if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
-                    send_message(character, client)
-                    character_list = None
-                    sent_message = True
-                pos_x += 1
-        elif message == 'waiting':
-            display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, WINDOWS_HEIGHT / 2, False)
-
-        if not sent_message and message != 'done':
-            send_message('waiting', client)
-
         if message == 'done':
             done = True
+        else:
+            if message != 'waiting' and message != 'done':
+                character_list = message
+
+            screen.fill(WHITE)
+
+            sent_message = False
+            if character_list is not None:
+                display_text(screen, 'choose your character!', WINDOWS_WIDTH / 2, 100, False)
+
+                pos_x = 1
+                for character in character_list:
+                    if button(screen, character, 200 * pos_x, 450, 100, 50, GREY, LIGHT_GREY):
+                        send_message(character, client)
+                        character_list = None
+                        sent_message = True
+                    pos_x += 1
+            elif message == 'waiting':
+                display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, WINDOWS_HEIGHT / 2, False)
+
+            if not sent_message and message != 'done':
+                send_message('waiting', client)
 
         pygame.display.flip()
 
@@ -587,7 +587,6 @@ def main():
                 if accepted:
                     message = receive_message(cubix_client)
                     if message == 'The game is ready':
-
                         while num_rounds != 0:
                             if num_rounds != 0:
                                 main_visual_game(screen, clock, cubix_client)

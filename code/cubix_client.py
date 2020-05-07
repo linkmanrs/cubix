@@ -588,8 +588,7 @@ def main():
                     message = receive_message(cubix_client)
                     if message == 'The game is ready':
                         while num_rounds != 0:
-                            if num_rounds != 0:
-                                main_visual_game(screen, clock, cubix_client)
+                            main_visual_game(screen, clock, cubix_client)
                             num_rounds -= 1
                         winner = 'the winner is: ' + receive_message(cubix_client)
                         ending_screen(winner, screen, clock)

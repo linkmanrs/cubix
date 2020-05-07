@@ -3,6 +3,7 @@ __author__ = 'Roy'
 import random
 import time
 import pygame
+import threading
 import socket
 import msgpack
 import sqlite3
@@ -212,7 +213,8 @@ def manage_pressed_buttons(player, event, global_var):  # Manages the list of pr
         for key in player.pressed_buttons:
             control_movement(player, key, global_var)
     if event.type == pygame.KEYUP:
-        player.pressed_buttons.remove(event.key)
+        if event.key in player.pressed_buttons:
+            player.pressed_buttons.remove(event.key)
         if player.can_move:
             control_stop_movement(player, event.key)
     # End manage_pressed_buttons
@@ -437,6 +439,20 @@ def manage_power(global_var):  # Manages the power list
     # End manage_power
 
 
+def except_client(client, username_list, _, soc):
+    cubix_database = sqlite3.connect(DATABASE_FOLDER_ROUTE + DATABASE_NAME)
+    cubix_cursor = cubix_database.cursor()
+
+    accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
+    if accepted:
+        playing = choose_command_after_logged(cubix_cursor, soc, user_id)
+        client.user_id = user_id
+        client.user_name = cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
+        client.playing = playing
+        client.accepted = playing
+    # End except_client
+
+
 def choose_command_at_enterence(cursor, client, username_list):  # Let the user pick the action he wants to do
     command = receive_message(client)
     action = {
@@ -573,35 +589,36 @@ def collect_status(user_id, cubix_cursor, client):  # sends the status of the pl
 
 def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game
     client_list = []
+    thread_list = []
 
     cubix_server.listen(4)
     read_list = [cubix_server]
     client_id = 0
     confirmation_count = 0
     username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
-    while confirmation_count != MAXIMUM_CLIENTS:
-        readable, writable, errored = select.select(read_list, [], [])
+    while confirmation_count < MAXIMUM_CLIENTS:
+        '''readable, writable, errored = select.select(read_list, [], [])
         for soc in readable:
-            if soc is cubix_server:
-                (client_socket, client_address) = cubix_server.accept()
-                new_client = ClientPlayer(client_id, client_socket, client_address)
-                client_list.append(new_client)
-                client_id += 1
-                read_list.append(client_socket)
-            else:
-                accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
-                playing = False
-                if accepted:
-                    playing = choose_command_after_logged(cubix_cursor, soc, user_id)
-                for client in client_list:
-                    if client.client_socket is soc:
-                        if accepted:
-                            client.user_id = user_id
-                            client.user_name = \
-                                cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
-                            client.playing = playing
-                            client.accepted = playing
-                confirmation_count += 1
+            if soc is cubix_server:'''
+        (client_socket, client_address) = cubix_server.accept()
+        new_client = ClientPlayer(client_id, client_socket, client_address)
+        client_list.append(new_client)
+        client_id += 1
+        new_thread = threading.Thread(target=except_client,
+                                      args=(new_client, username_list, cubix_cursor, client_socket))
+        new_thread.start()
+        thread_list.append(new_thread)
+        read_list.append(client_socket)
+        confirmation_count += 1
+        '''else:
+            thread_index = 0
+            for client in client_list:
+                if client.client_socket is soc:
+                    thread_index = client_list.index(client)
+            thread_list[thread_index].start()'''
+
+    for thread in thread_list:
+        thread.join()
 
     for client in client_list[:]:
         if not client.accepted:

@@ -1,8 +1,4 @@
-import threading
+import random
 
-def x(y, r):
-    print(y)
-    print(r)
-
-e = threading.Thread(target=x, args=(88, 2))
-e.start()
+map_num = random.randint(0, 1)
+print(map_num)

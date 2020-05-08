@@ -360,3 +360,13 @@ def player_input(event):  # Returns the key that was pushed down
             else:
                 send_message('DENIED!, too many tries were used', client)'''
 
+'''else:
+            thread_index = 0
+            for client in client_list:
+                if client.client_socket is soc:
+                    thread_index = client_list.index(client)
+            thread_list[thread_index].start()'''
+
+'''readable, writable, errored = select.select(read_list, [], [])
+        for soc in readable:
+            if soc is cubix_server:'''

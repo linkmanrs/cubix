@@ -1,6 +1,7 @@
 __author__ = 'Roy'
 
 import msgpack
+import select
 import socket
 import pygame
 from text_box import InputBox
@@ -449,6 +450,29 @@ def get_status(client, screen, clock):  # Gets the users status from the server
     # End get_status
 
 
+def wait_for_players(client, screen, clock):  # A screen for the client to wait for other players
+    finish = False
+    while not finish:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                finish = True
+
+        screen.fill(WHITE)
+
+        display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, 200, False)
+
+        display_text(screen, 'click the red x if you want to exit', WINDOWS_WIDTH / 2, 400, False)
+
+        pygame.display.flip()
+
+        clock.tick(REFRESH_RATE)
+
+        message = receive_message(client)
+        if message == 'done':
+            finish = True
+    # End wait_for_players
+
+
 def choosing_rounds(client, screen,
                     clock):  # Letting only the game ruler to choose how many rounds the players will play
     message = receive_message(client)
@@ -560,7 +584,7 @@ def ending_screen(message, screen, clock):  # The screen that ends the applicati
 
         display_text(screen, message, WINDOWS_WIDTH / 2, 200, False)
 
-        display_text(screen, 'click the x to exit', WINDOWS_WIDTH / 2, 400, False)
+        display_text(screen, 'click the red x to exit', WINDOWS_WIDTH / 2, 400, False)
 
         pygame.display.flip()
 
@@ -581,6 +605,7 @@ def main():
     if accepted:
         accepted = choose_command_after_logged(cubix_client, screen, clock)
         if accepted:
+            wait_for_players(cubix_client, screen, clock)
             accepted, num_rounds = choosing_rounds(cubix_client, screen, clock)
             if accepted:
                 accepted = choose_character(cubix_client, screen, clock)

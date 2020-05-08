@@ -7,7 +7,6 @@ import threading
 import socket
 import msgpack
 import sqlite3
-import select
 import hashlib
 import binascii
 import os
@@ -25,6 +24,7 @@ WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
 MAXIMUM_CLIENTS = 2
 MINIMUM_PLAYERS = 1
+FINISHED_LOGGING = 4
 SPRITE_FOLDER_ROUTE = '../sprites/'
 MUSIC_AND_SOUNDTRACK_ROUTE = '../ost/'
 MAIN_THEME_NAME = 'forsaken dreams by edgy.mpeg'
@@ -38,6 +38,20 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+# maps
+MAP0 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600]]
+MAP1 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600], [900, 600], [1000, 600]]
+MAP2 = [[300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [0, 400], [1000, 400]]
+MAP3 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600], [900, 600], [1000, 600], [0, 400], [100, 400], [900, 400], [1000, 400], [400, 200], [500, 200], [600, 200]]
+MAPS = [MAP0, MAP1, MAP2, MAP3]
+
+# spawn points
+SPAWN_POINT0 = [[0, 0], [150, 0], [300, 0], [450, 0]]
+SPAWN_POINT1 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
+SPAWN_POINT2 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
+SPAWN_POINT3 = [[400, 0], [600, 0], [350, 200], [650, 200]]
+SPAWN_POINTS = [SPAWN_POINT0, SPAWN_POINT1, SPAWN_POINT2, SPAWN_POINT3]
+
 
 def main_physical_game(clock, client_list):  # Main physical game
     for client in client_list:
@@ -45,9 +59,11 @@ def main_physical_game(clock, client_list):  # Main physical game
         send_status([], client)
     global_var = GlobalVariable()
 
-    make_players(global_var, client_list)
+    map_num = random.randint(0, len(MAPS) - 1)
 
-    floor(global_var)
+    make_players(global_var, client_list, map_num)
+
+    floor(global_var, map_num)
 
     # Main loop
     finish = False
@@ -159,21 +175,23 @@ def player_left(global_var, player, client, client_list):  # Making the player q
     # End player_left
 
 
-def make_players(global_var, client_list):  # Create players
+def make_players(global_var, client_list, spawn_num):  # Create players
+    spawn = SPAWN_POINTS[spawn_num]
     i = 0
     for client in client_list:
-        player = Player(i, 0, global_var.object_id, client.chosen_character, client.user_name)
+        player = Player(spawn[i][0], spawn[i][1], global_var.object_id, client.chosen_character, client.user_name)
         client.add_player_id(global_var.object_id)
         global_var.object_id += 1
         new_status('new', player, global_var)
         global_var.player_list.append(player)
-        i += 150
+        i += 1
     # End make_players
 
 
-def floor(global_var):  # Creates a floor with blocks
-    for i in range(9):
-        block = Block(100 * i, WINDOWS_HEIGHT - 100, global_var.object_id)
+def floor(global_var, map_num):  # Creates a floor with blocks
+    game_map = MAPS[map_num]
+    for coordinates in game_map:
+        block = Block(coordinates[0], coordinates[1], global_var.object_id)
         global_var.object_id += 1
         new_status('new', block, global_var)
         global_var.block_list.append(block)
@@ -592,14 +610,10 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
     thread_list = []
 
     cubix_server.listen(4)
-    read_list = [cubix_server]
     client_id = 0
     confirmation_count = 0
     username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
     while confirmation_count < MAXIMUM_CLIENTS:
-        '''readable, writable, errored = select.select(read_list, [], [])
-        for soc in readable:
-            if soc is cubix_server:'''
         (client_socket, client_address) = cubix_server.accept()
         new_client = ClientPlayer(client_id, client_socket, client_address)
         client_list.append(new_client)
@@ -608,14 +622,7 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
                                       args=(new_client, username_list, cubix_cursor, client_socket))
         new_thread.start()
         thread_list.append(new_thread)
-        read_list.append(client_socket)
         confirmation_count += 1
-        '''else:
-            thread_index = 0
-            for client in client_list:
-                if client.client_socket is soc:
-                    thread_index = client_list.index(client)
-            thread_list[thread_index].start()'''
 
     for thread in thread_list:
         thread.join()
@@ -624,6 +631,9 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
         if not client.accepted:
             client_list.remove(client)
             client.client_socket.close()
+
+    for client in client_list[:]:
+        send_message('done', client.client_socket)
 
     num_rounds = 0
     if len(client_list) != 0:

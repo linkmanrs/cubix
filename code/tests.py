@@ -1,4 +1,10 @@
-import random
+import pygame
 
-map_num = random.randint(0, 1)
-print(map_num)
+pygame.init()
+print('dd')
+
+pygame.time.delay(3000)
+
+print('ss')
+
+pygame.quit()

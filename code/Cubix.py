@@ -54,12 +54,14 @@ SPAWN_POINTS = [SPAWN_POINT0, SPAWN_POINT1, SPAWN_POINT2, SPAWN_POINT3]
 
 
 def main_physical_game(clock, client_list):  # Main physical game
+    pygame.time.delay(3000)
     for client in client_list:
         event = receive_message(client.client_socket)
         send_status([], client)
     global_var = GlobalVariable()
 
     map_num = random.randint(0, len(MAPS) - 1)
+    # map_num = 3
 
     make_players(global_var, client_list, map_num)
 
@@ -462,6 +464,7 @@ def except_client(client, username_list, _, soc):
     cubix_cursor = cubix_database.cursor()
 
     accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
+    cubix_database.commit()
     if accepted:
         playing = choose_command_after_logged(cubix_cursor, soc, user_id)
         client.user_id = user_id

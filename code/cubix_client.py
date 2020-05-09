@@ -31,6 +31,7 @@ LIGHT_GREY = (215, 215, 215)
 
 
 def main_visual_game(screen, clock, cubix_client):  # The main game with only visuals
+    countdown(screen)
     visual_list = []  # List of all the visual objects
     # play_theme()
 
@@ -58,6 +59,22 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
         # End of main loop
     pygame.mixer.music.stop()
     # End main_visual_game
+
+
+def countdown(screen):  # A screen that counts down from 3 until the game starts
+    screen.fill(WHITE)
+    display_text(screen, "3", (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2), True)
+    pygame.display.flip()
+    pygame.time.delay(1000)
+    screen.fill(WHITE)
+    display_text(screen, "2", (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2), True)
+    pygame.display.flip()
+    pygame.time.delay(1000)
+    screen.fill(WHITE)
+    display_text(screen, "1", (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2), True)
+    pygame.display.flip()
+    pygame.time.delay(1000)
+    # End countdown
 
 
 def play_theme():  # Plays the main theme of the game

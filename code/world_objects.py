@@ -49,8 +49,10 @@ class WorldObject(object):  # Class for every physical object in the game
         self.x += self.__vx
         if self.x + self.size_x > WINDOWS_WIDTH - 1:  # Prevent object from going off screen
             self.x = WINDOWS_WIDTH - self.size_x
+            self.__vx = 0
         elif self.x < 0:
             self.x = 0
+            self.__vx = 0
         # End update_loc_x
 
     def update_loc_y(self):  # Function for updating location on the y axis according to speed

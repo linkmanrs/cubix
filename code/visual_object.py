@@ -15,7 +15,7 @@ class VisualObject(object):  # Class for the visuallity of the object
 
     def __init__(self, sprite_name, colorkey, x, y, object_id, is_particle, facing_right):
         super().__init__()
-        self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + sprite_name).convert()
+        self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + sprite_name + '_idle' + '.png').convert()
         self.image.set_colorkey(colorkey)
         self.sprite_name = sprite_name
         self.colorkey = colorkey
@@ -24,7 +24,7 @@ class VisualObject(object):  # Class for the visuallity of the object
 
         self.x = x
         self.y = y
-        self.state = ''
+        self.state = 'idle'
         self.moving_frame_num = 0
         self.facing_right = facing_right
         self.is_particle = is_particle
@@ -52,15 +52,15 @@ class VisualObject(object):  # Class for the visuallity of the object
         # End update_state
 
     def correct_state(self):  # A function that will change the image on the player according to his state (animation)
-        if self.state == 'moving':
-            if self.moving_frame_num == 3:
+        if self.state == 'moving_':
+            if self.moving_frame_num == 12:
                 self.moving_frame_num = 0
-            self.image = pygame.image.load(
-                SPRITE_FOLDER_ROUTE + self.sprite_name + self.state + self.moving_frame_num).convert()
+            self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + self.sprite_name + '_' + self.state + str(
+                self.moving_frame_num) + '.png').convert()
             self.image.set_colorkey(self.colorkey)
             self.moving_frame_num += 1
         else:
-            self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + self.sprite_name + self.state).convert()
+            self.image = pygame.image.load(SPRITE_FOLDER_ROUTE + self.sprite_name + '_' + self.state + '.png').convert()
             self.image.set_colorkey(self.colorkey)
             self.moving_frame_num = 0
         if not self.facing_right:

@@ -1,10 +1,2 @@
-import pygame
-
-pygame.init()
-print('dd')
-
-pygame.time.delay(3000)
-
-print('ss')
-
-pygame.quit()
+for i in range(2, 6):
+    print(i)

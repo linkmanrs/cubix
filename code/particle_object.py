@@ -22,6 +22,7 @@ class Particle(object):  # Class for every particle object in the game
         super().__init__()
         self.object_id = object_id
         self.is_particle = True
+        self.state = 'idle'
         self.x = float(x)
         self.y = float(y)
         self.size_x = size_x

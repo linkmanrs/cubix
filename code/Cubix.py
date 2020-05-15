@@ -23,7 +23,7 @@ WINDOWS_WIDTH = 1100
 WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
 MAXIMUM_CLIENTS = 2
-MINIMUM_PLAYERS = 1
+MINIMUM_PLAYERS = 2
 FINISHED_LOGGING = 4
 SPRITE_FOLDER_ROUTE = '../sprites/'
 MUSIC_AND_SOUNDTRACK_ROUTE = '../ost/'
@@ -40,9 +40,11 @@ BLUE = (0, 0, 255)
 
 # maps
 MAP0 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600]]
-MAP1 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600], [900, 600], [1000, 600]]
+MAP1 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600],
+        [900, 600], [1000, 600]]
 MAP2 = [[300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [0, 400], [1000, 400]]
-MAP3 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600], [900, 600], [1000, 600], [0, 400], [100, 400], [900, 400], [1000, 400], [400, 200], [500, 200], [600, 200]]
+MAP3 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600],
+        [900, 600], [1000, 600], [0, 400], [100, 400], [900, 400], [1000, 400], [400, 200], [500, 200], [600, 200]]
 MAPS = [MAP0, MAP1, MAP2, MAP3]
 
 # spawn points
@@ -91,7 +93,7 @@ def main_physical_game(clock, client_list):  # Main physical game
             send_status(global_var.status_list, client)
         global_var.status_list.clear()
 
-        if len(global_var.player_list) == MINIMUM_PLAYERS:  # Ends the game if all the players left
+        if len(global_var.player_list) == 1:  # Ends the game if one player is left alive
             finish = True
             for client in client_list:
                 send_status([['quit']], client)
@@ -273,7 +275,7 @@ def control_stop_movement(player, player_input):  # Making the player stop movin
 def update_players(global_var):  # Function that contains all the necessary updates for the player list
     for player in global_var.player_list:
         manage_cooldown(player)
-        pos = player.get_pos()
+        # pos = player.get_pos()
         player.check_death_zone()
         if check_alive(player):
             death(player, global_var)
@@ -287,8 +289,8 @@ def update_players(global_var):  # Function that contains all the necessary upda
         player.check_facing()
 
         player.sync_test_rect()
-        if pos != player.get_pos():
-            new_status('update', player, global_var)
+        # if pos != player.get_pos():
+        new_status('update', player, global_var)
     # End update_player
 
 
@@ -471,6 +473,7 @@ def except_client(client, username_list, _, soc):
         client.user_name = cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
         client.playing = playing
         client.accepted = playing
+        # wait_for_players(soc)
     # End except_client
 
 
@@ -558,6 +561,9 @@ def sign_in(cubix_cursor, client, username_list):  # lets the user try to sign i
     user_id = None
     if password_accepted and username_accepted:
         user_id = cubix_cursor.execute('SELECT ID FROM users WHERE username=?', [username]).fetchone()[0]
+        send_message(username == 'linkmanrs', client)
+    else:
+        send_message(False, client)
     return password_accepted and username_accepted, user_id
     # End sign_in
 
@@ -583,6 +589,7 @@ def choose_command_after_logged(cursor, client, user_id):  # Let the user pick t
     command = receive_message(client)
     action = {
         'get status': collect_status,
+        'show log': game_log,
         'play game': True,
         'exit': False
     }
@@ -608,6 +615,28 @@ def collect_status(user_id, cubix_cursor, client):  # sends the status of the pl
     # End send_status
 
 
+def game_log(user_id, cubix_cursor, client):  # Shows the admin the game log
+    dates = cubix_cursor.execute('SELECT datetime FROM games').fetchall()
+    send_message(dates, client)
+    players = cubix_cursor.execute('SELECT players FROM games').fetchall()
+    send_message(players, client)
+    winner = cubix_cursor.execute('SELECT winner FROM games').fetchall()
+    send_message(winner, client)
+    still_playing = receive_message(client)
+    return still_playing
+    # End game_log
+
+
+def wait_for_players(client):  # A protocol for notifing the client about other players
+    finish = False
+    while not finish:
+        send_message('waiting', client)
+        message = receive_message(client)
+        if message == 'done':
+            finish = True
+    # End wait_for_players
+
+
 def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game
     client_list = []
     thread_list = []
@@ -626,6 +655,21 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
         new_thread.start()
         thread_list.append(new_thread)
         confirmation_count += 1
+
+    '''finished = False
+    while not finished:
+        everyone_finished = 0
+        for client in client_list:
+            if client.playing is not None:
+                everyone_finished += 1
+        if everyone_finished == confirmation_count:
+            for client in client_list[:]:
+                if not client.accepted:
+                    client_list.remove(client)
+                    client.client_socket.close()
+
+            for client in client_list[:]:
+                send_message('done', client.client_socket)'''
 
     for thread in thread_list:
         thread.join()
@@ -740,7 +784,7 @@ def main():
 
     client_list, num_rounds = collect_clients(cubix_server, cubix_cursor)
 
-    game_client_list = client_list.copy()
+    # game_client_list = client_list.copy()
     if len(client_list) >= MINIMUM_PLAYERS:
         for client in client_list:
             send_message('The game is ready', client.client_socket)
@@ -749,11 +793,11 @@ def main():
 
         while num_rounds != 0:
             num_rounds -= 1
-            if len(game_client_list) >= MINIMUM_PLAYERS:
+            if len(client_list) >= MINIMUM_PLAYERS:
                 new_game_id = cubix_cursor.execute('SELECT max(ID) FROM games').fetchone()[0] + 1
                 date = time.asctime()
 
-                winner = main_physical_game(clock, game_client_list)
+                winner = main_physical_game(clock, client_list)
                 client_winner = None
                 for client in client_list:
                     if client.user_name == winner.user_name:
@@ -787,7 +831,7 @@ def main():
 
     cubix_database.commit()
 
-    for client in game_client_list:
+    for client in client_list:
         client.client_socket.close()
     cubix_server.close()
     cubix_database.close()

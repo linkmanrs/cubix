@@ -11,7 +11,7 @@ BLUE = (0, 0, 255)
 SPRITE_FOLDER_ROUTE = '../sprites/'
 
 # Constants for WorldObject class
-IMAGE_NAME = 'block.png'
+IMAGE_NAME = 'block'
 COLORKEY = RED
 START_VX = 0
 START_VY = 0

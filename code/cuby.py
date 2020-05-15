@@ -22,7 +22,7 @@ SIZE_X = 104
 SIZE_Y = 100
 GRAVITY = True
 
-# Constants for cuby
+# Constants for the player
 MAX_HEALTH = 5
 DEFAULT_POWER = 'punch'
 POWER_COOLDOWN = 45
@@ -31,7 +31,7 @@ POWER_COOLDOWN = 45
 class Player(WorldObject):  # Player class
 
     def __init__(self, x, y, object_id, character, user_name):
-        super().__init__(character + '.png', COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)
+        super().__init__(character, COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)
         self.object_id = object_id
         self.user_name = user_name
         self.__max_health = MAX_HEALTH
@@ -61,7 +61,7 @@ class Player(WorldObject):  # Player class
         elif speed_y < 0:
             self.state = 'rising'
         elif speed_x != 0:
-            self.state = 'moving'
+            self.state = 'moving_'
         # End correct_state
 
     def move_left(self):  # Makes the player move left

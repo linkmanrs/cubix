@@ -1,7 +1,6 @@
 __author__ = 'Roy'
 
 import msgpack
-import select
 import socket
 import pygame
 from text_box import InputBox
@@ -33,6 +32,7 @@ LIGHT_GREY = (215, 215, 215)
 def main_visual_game(screen, clock, cubix_client):  # The main game with only visuals
     countdown(screen)
     visual_list = []  # List of all the visual objects
+    animation_counter = 0
     # play_theme()
 
     finish = False
@@ -46,8 +46,8 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
         status_list = receive_status(cubix_client)
 
         finish = process_data(status_list, visual_list)
-        '''for visual in visual_list:
-            visual.correct_state()'''
+        for visual in visual_list:
+            visual.correct_state()
         paint_objects(screen, visual_list)
 
         # Refresh the screen
@@ -239,7 +239,7 @@ def choose_command_at_enterence(client, screen, clock):  # Let the user pick the
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 send_message('exit', client)
-                return False
+                return False, False
 
         screen.fill(WHITE)
 
@@ -263,7 +263,7 @@ def choose_command_at_enterence(client, screen, clock):  # Let the user pick the
     if not action.get(command) is None:
         return action.get(command)(client, screen, clock)
     else:
-        return False
+        return False, False
     # End choose_action
 
 
@@ -332,7 +332,7 @@ def sign_up(client, screen, clock):  # Registers a user to the database
         pygame.display.flip()
         clock.tick(REFRESH_RATE)
 
-    return True
+    return True, False
     # End register_user
 
 
@@ -392,12 +392,12 @@ def try_log(client, screen, clock):  # Trying to log in to the server
 
         pygame.display.flip()
         clock.tick(REFRESH_RATE)
-
-    return accepted
+    is_admin = receive_message(client)
+    return accepted, is_admin
     # End try_log
 
 
-def choose_command_after_logged(client, screen, clock):  # Let the user pick the action he wants to do
+def choose_command_after_logged(client, screen, clock, is_admin):  # Let the user pick the action he wants to do
     command = ''
     while command == '':
         for event in pygame.event.get():
@@ -412,6 +412,10 @@ def choose_command_after_logged(client, screen, clock):  # Let the user pick the
         if button(screen, "play game", 220, 500, 100, 50, GREY, LIGHT_GREY):
             command = 'play game'
 
+        if is_admin:
+            if button(screen, "show log", 500, 500, 100, 50, GREY, LIGHT_GREY):
+                command = 'show log'
+
         if button(screen, "get status", 775, 500, 100, 50, GREY, LIGHT_GREY):
             command = 'get status'
 
@@ -422,6 +426,7 @@ def choose_command_after_logged(client, screen, clock):  # Let the user pick the
     send_message(command, client)
     action = {
         'get status': get_status,
+        'show log': show_log,
         'play game': True
     }
     if not action.get(command) is None:
@@ -467,18 +472,77 @@ def get_status(client, screen, clock):  # Gets the users status from the server
     # End get_status
 
 
-def wait_for_players(client, screen, clock):  # A screen for the client to wait for other players
+def show_log(client, screen, clock):  # Shows the admin the game log
+    dates = receive_message(client)
+    players = receive_message(client)
+    winner = receive_message(client)
+    index = 0
+
+    still_playing = False
     finish = False
     while not finish:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                finish = True
+                send_message('exit', client)
+                return False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    still_playing = True
+                    finish = True
+                elif event.key == pygame.K_ESCAPE:
+                    still_playing = False
+                    finish = True
+                elif event.key == pygame.K_DOWN:
+                    if index != len(dates) - 5:
+                        index += 1
+                elif event.key == pygame.K_UP:
+                    if index != 0:
+                        index -= 1
+
+        screen.fill(WHITE)
+
+        display_text(screen, 'hey Link! Space = still playing, Escape = not playing (use UP and DOWN to scroll)',
+                     WINDOWS_WIDTH / 2, 20, False)
+        display_text(screen, 'datetime:', 250, 100, False)
+        display_text(screen, 'players:', 520, 100, False)
+        display_text(screen, 'winner:', 800, 100, False)
+
+        for i in range(2, 7):
+            display_text(screen, dates[index][0], 250, i * 100, False)
+            index += 1
+        index -= 5
+
+        for i in range(2, 7):
+            display_text(screen, players[index][0], 520, i * 100, False)
+            index += 1
+        index -= 5
+
+        for i in range(2, 7):
+            display_text(screen, winner[index][0], 800, i * 100, False)
+            index += 1
+        index -= 5
+
+        pygame.display.flip()
+
+        clock.tick(REFRESH_RATE)
+
+    send_message(still_playing, client)
+    return still_playing
+    # End show_log
+
+
+def wait_for_players(client, screen, clock):  # A screen for the client to wait for other players
+    finish = False
+    while not finish:
+        '''for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                finish = True'''
 
         screen.fill(WHITE)
 
         display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, 200, False)
 
-        display_text(screen, 'click the red x if you want to exit', WINDOWS_WIDTH / 2, 400, False)
+        # display_text(screen, 'click the red x if you want to exit', WINDOWS_WIDTH / 2, 400, False)
 
         pygame.display.flip()
 
@@ -486,7 +550,13 @@ def wait_for_players(client, screen, clock):  # A screen for the client to wait 
 
         message = receive_message(client)
         if message == 'done':
+            # message = receive_message(client)
             finish = True
+
+        '''if finish:
+            send_message('done', client)
+        else:
+            send_message('waiting', client)'''
     # End wait_for_players
 
 
@@ -618,9 +688,9 @@ def main():
     # Adding clock
     clock = pygame.time.Clock()
 
-    accepted = choose_command_at_enterence(cubix_client, screen, clock)
+    accepted, is_admin = choose_command_at_enterence(cubix_client, screen, clock)
     if accepted:
-        accepted = choose_command_after_logged(cubix_client, screen, clock)
+        accepted = choose_command_after_logged(cubix_client, screen, clock, is_admin)
         if accepted:
             wait_for_players(cubix_client, screen, clock)
             accepted, num_rounds = choosing_rounds(cubix_client, screen, clock)

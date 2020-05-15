@@ -13,7 +13,7 @@ WINDOWS_HEIGHT = 700
 SPRITE_FOLDER_ROUTE = '../sprites/'
 
 # Constants for WorldObject class
-IMAGE_NAME = 'punch.png'
+IMAGE_NAME = 'punch'
 COLORKEY = RED
 START_VX = 0
 START_VY = 0

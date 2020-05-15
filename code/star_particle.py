@@ -22,5 +22,5 @@ GRAVITY = True
 class Star(Particle):  # Star particle that falls from the sky for beauty
 
     def __init__(self, x, y, object_id):
-        super().__init__('star.png', COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)
+        super().__init__('star', COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)
         # End __init__

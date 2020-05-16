@@ -173,7 +173,7 @@ def new_quit_status(global_var):  # Creates a new quit status for the clients
 def player_left(global_var, player, client, client_list):  # Making the player quit and killing his character
     if player is not None:
         death(player, global_var)
-    send_status([['quit']], client)
+    send_status([['quit game']], client)
     client_list.remove(client)
     client.client_socket.close()
     # End player_left
@@ -203,22 +203,21 @@ def floor(global_var, map_num):  # Creates a floor with blocks
 
 
 def manage_event(global_var, event, client, client_list):  # Manages the events that are received
-    if len(global_var.player_list) != 0:
-        for player in global_var.player_list:
-            if player.object_id == client.player_id:
-                if event.type == pygame.QUIT:
-                    player_left(global_var, player, client, client_list)
-                else:
-                    manage_pressed_buttons(player, event, global_var)
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        player_left(global_var, player, client, client_list)
-            else:
-                if event.type == pygame.QUIT:
-                    player_left(global_var, None, client, client_list)
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        player_left(global_var, None, client, client_list)
+    character = None
+    has_player = False
+    for player in global_var.player_list:
+        if player.object_id == client.player_id:
+            character = player
+            has_player = True
+
+    if has_player:
+        if event.type == pygame.QUIT:
+            player_left(global_var, character, client, client_list)
+        else:
+            manage_pressed_buttons(character, event, global_var)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                player_left(global_var, character, client, client_list)
     else:
         if event.type == pygame.QUIT:
             player_left(global_var, None, client, client_list)
@@ -461,7 +460,7 @@ def manage_power(global_var):  # Manages the power list
     # End manage_power
 
 
-def except_client(client, username_list, _, soc):
+def except_client(client, username_list, _, soc):  # A function that handles the logging of the clients
     cubix_database = sqlite3.connect(DATABASE_FOLDER_ROUTE + DATABASE_NAME)
     cubix_cursor = cubix_database.cursor()
 
@@ -606,9 +605,9 @@ def choose_command_after_logged(cursor, client, user_id):  # Let the user pick t
 
 
 def collect_status(user_id, cubix_cursor, client):  # sends the status of the player
-    numgames = cubix_cursor.execute('SELECT numgames FROM users WHERE ID=?', [user_id]).fetchone()[0]
+    num_games = cubix_cursor.execute('SELECT numgames FROM users WHERE ID=?', [user_id]).fetchone()[0]
     wins = cubix_cursor.execute('SELECT wins FROM users WHERE ID=?', [user_id]).fetchone()[0]
-    status = 'you played {} games and won {} games'.format(numgames, wins)
+    status = 'you played {} games and won {} games'.format(num_games, wins)
     send_message(status, client)
     still_playing = receive_message(client)
     return still_playing
@@ -627,7 +626,7 @@ def game_log(user_id, cubix_cursor, client):  # Shows the admin the game log
     # End game_log
 
 
-def wait_for_players(client):  # A protocol for notifing the client about other players
+def wait_for_players(client):  # A protocol for notifying the client about other players
     finish = False
     while not finish:
         send_message('waiting', client)
@@ -637,7 +636,7 @@ def wait_for_players(client):  # A protocol for notifing the client about other 
     # End wait_for_players
 
 
-def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game
+def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game or view statuses
     client_list = []
     thread_list = []
 
@@ -784,7 +783,6 @@ def main():
 
     client_list, num_rounds = collect_clients(cubix_server, cubix_cursor)
 
-    # game_client_list = client_list.copy()
     if len(client_list) >= MINIMUM_PLAYERS:
         for client in client_list:
             send_message('The game is ready', client.client_socket)

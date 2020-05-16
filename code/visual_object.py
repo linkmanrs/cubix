@@ -11,7 +11,7 @@ BLUE = (0, 0, 255)
 SPRITE_FOLDER_ROUTE = '../sprites/'
 
 
-class VisualObject(object):  # Class for the visuallity of the object
+class VisualObject(object):  # Class for the visuality of the object
 
     def __init__(self, sprite_name, colorkey, x, y, object_id, is_particle, facing_right):
         super().__init__()

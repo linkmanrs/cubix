@@ -41,8 +41,6 @@ class WorldObject(object):  # Class for every physical object in the game
 
         self.sprite_name = sprite_name
         self.colorkey = colorkey
-
-        # self.visual = VisualObject(sprite_name, colorkey, x, y, object_id)
         # End __init__
 
     def update_loc_x(self):  # Function for updating location on the x axis according to speed
@@ -108,7 +106,7 @@ class WorldObject(object):  # Class for every physical object in the game
                 self.__ay = GRAVITY_CONSTANT_DOWN
         # End correct_a
 
-    def copy_object(self):
+    def copy_object(self):  # copies and returns the given object
         new_object = WorldObject(self.sprite_name, self.colorkey, self.x, self.y, self.size_x,
                                  self.size_y,
                                  self.__vx, self.__vy,

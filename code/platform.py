@@ -20,7 +20,7 @@ SIZE_Y = 100
 GRAVITY = False
 
 
-class Block(WorldObject):
+class Block(WorldObject):  # A platform class
 
     def __init__(self, x, y, object_id):
         super().__init__(IMAGE_NAME, COLORKEY, x, y, SIZE_X, SIZE_Y, START_VX, START_VY, GRAVITY, object_id)

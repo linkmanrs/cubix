@@ -1,11 +1,10 @@
 import pygame
 
-
 COLOR_INACTIVE = (181, 181, 181)
 COLOR_ACTIVE = (0, 0, 0)
 
 
-class InputBox:
+class InputBox:  # A class for an input box object
 
     def __init__(self, x, y, width, height, is_password, text=''):
         self.rect = pygame.Rect(x, y, width, height)
@@ -17,7 +16,7 @@ class InputBox:
         self.active = False
         # End __init__
 
-    def handle_event(self, event):
+    def handle_event(self, event):  # Handle the box according the the input
         if event.type == pygame.MOUSEBUTTONDOWN:  # If the user clicked on the input_box rect
             if self.rect.collidepoint(event.pos[0], event.pos[1]):
                 # Toggle the active variable.
@@ -44,7 +43,7 @@ class InputBox:
         # End handle_event
 
     def update(self):  # Resize the box if the text is too long.
-        width = max(200, self.txt_surface.get_width()+10)
+        width = max(200, self.txt_surface.get_width() + 10)
         self.rect.w = width
         # End update
 
@@ -60,6 +59,6 @@ class InputBox:
             screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
 
         else:
-            screen.blit(self.txt_surface, (self.rect.x+5, self.rect.y+5))
+            screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
         pygame.draw.rect(screen, self.color, self.rect, 2)
         # End draw

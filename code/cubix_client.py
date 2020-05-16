@@ -31,8 +31,8 @@ LIGHT_GREY = (215, 215, 215)
 
 def main_visual_game(screen, clock, cubix_client):  # The main game with only visuals
     countdown(screen)
+    still_playing = True
     visual_list = []  # List of all the visual objects
-    animation_counter = 0
     # play_theme()
 
     finish = False
@@ -45,7 +45,7 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
 
         status_list = receive_status(cubix_client)
 
-        finish = process_data(status_list, visual_list)
+        finish, still_playing = process_data(status_list, visual_list)
         for visual in visual_list:
             visual.correct_state()
         paint_objects(screen, visual_list)
@@ -58,6 +58,7 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
 
         # End of main loop
     pygame.mixer.music.stop()
+    return still_playing
     # End main_visual_game
 
 
@@ -84,7 +85,7 @@ def play_theme():  # Plays the main theme of the game
     # End play_theme
 
 
-def receive_status(cubix_client):  # receives the status list from the client
+def receive_status(cubix_client):  # Receives the status list from the server
     length = b""
     break_loop = False
     while not break_loop:
@@ -101,7 +102,7 @@ def receive_status(cubix_client):  # receives the status list from the client
     # End receive_status
 
 
-def receive_message(client):  # receives the events from the client
+def receive_message(client):  # Receives the events from the server
     length = b""
     break_loop = False
     while not break_loop:
@@ -118,13 +119,13 @@ def receive_message(client):  # receives the events from the client
     # End receive_event
 
 
-def send_event(event, cubix_client):  # sends the event to the client
+def send_event(event, cubix_client):  # Sends the event to the server
     packed_event = msgpack.packb((event.type, event.dict), use_bin_type=True)
     cubix_client.send(str(len(packed_event)).encode() + b"|" + packed_event)
     # End send_event
 
 
-def send_message(message, cubix_client):
+def send_message(message, cubix_client):  # Sends any message to the server
     packed_event = msgpack.packb(message, use_bin_type=True)
     cubix_client.send(str(len(packed_event)).encode() + b"|" + packed_event)
     # End send_message
@@ -132,21 +133,27 @@ def send_message(message, cubix_client):
 
 def process_data(status_list, visual_list):  # Uses the data from the server to progress the game
     finish = False
+    still_playing = False
     for status in status_list:
         action = {
             'new': new_visual,
             'update': update_visual,
             'dead': kill_visual,
-            'quit': True
+            'quit': True,
+            'quit game': False
         }
 
         if not finish:
             if action.get(status[0]) is not None:
                 if action.get(status[0]) is True:
                     finish = True
+                    still_playing = True
+                elif action.get(status[0]) is False:
+                    finish = True
+                    still_playing = False
                 else:
                     finish = action.get(status[0])(status, visual_list)
-    return finish
+    return finish, still_playing
     # End process_data
 
 
@@ -181,6 +188,7 @@ new status = ['new', sprite_name, colorkey, x, y, object_id, is_particle]
 update status = ['status', object_id, x, y, facing, state]
 dead status = ['dead', object_id]
 quit status = ['quit']
+quit_game status = ['quit game']
 '''
 
 
@@ -194,7 +202,7 @@ def paint_objects(screen, object_list):  # paints all the objects in the list on
     # End paint_objects
 
 
-def text_objects(text, font):
+def text_objects(text, font):  # Creates a text surface and a corresponding rect
     text_surface = font.render(text, True, BLACK)
     return text_surface, text_surface.get_rect()
     # End text_objects
@@ -212,7 +220,8 @@ def display_text(screen, text, x, y, large_font):  # Displays the given text on 
     # End display_text
 
 
-def button(screen, message, x, y, button_width, button_height, inactive_color, active_color):
+def button(screen, message, x, y, button_width, button_height, inactive_color,
+           active_color):  # A function that displays a button and returns if it is pressed
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
 
@@ -233,7 +242,7 @@ def button(screen, message, x, y, button_width, button_height, inactive_color, a
     # End button
 
 
-def choose_command_at_enterence(client, screen, clock):  # Let the user pick the action he wants to do
+def choose_command_at_entrance(client, screen, clock):  # Let the user pick the action he wants to do
     command = ''
     while command == '':
         for event in pygame.event.get():
@@ -268,7 +277,7 @@ def choose_command_at_enterence(client, screen, clock):  # Let the user pick the
 
 
 def sign_up(client, screen, clock):  # Registers a user to the database
-
+    # Entering username
     box = InputBox(400, 500, 140, 32, False)
     response = None
     chose_name = False
@@ -302,6 +311,7 @@ def sign_up(client, screen, clock):  # Registers a user to the database
         pygame.display.flip()
         clock.tick(REFRESH_RATE)
 
+    # Entering password
     box.is_password = True
     chose_pass = False
     while not chose_pass:
@@ -688,7 +698,7 @@ def main():
     # Adding clock
     clock = pygame.time.Clock()
 
-    accepted, is_admin = choose_command_at_enterence(cubix_client, screen, clock)
+    accepted, is_admin = choose_command_at_entrance(cubix_client, screen, clock)
     if accepted:
         accepted = choose_command_after_logged(cubix_client, screen, clock, is_admin)
         if accepted:
@@ -699,11 +709,14 @@ def main():
                 if accepted:
                     message = receive_message(cubix_client)
                     if message == 'The game is ready':
+                        playing = True
                         while num_rounds != 0:
-                            main_visual_game(screen, clock, cubix_client)
-                            num_rounds -= 1
-                        winner = 'the winner is: ' + receive_message(cubix_client)
-                        ending_screen(winner, screen, clock)
+                            if playing:
+                                playing = main_visual_game(screen, clock, cubix_client)
+                                num_rounds -= 1
+                        if playing:
+                            winner = 'the winner is: ' + receive_message(cubix_client)
+                            ending_screen(winner, screen, clock)
                     else:
                         ending_screen(message, screen, clock)
     else:

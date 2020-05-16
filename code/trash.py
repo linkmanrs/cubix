@@ -370,3 +370,26 @@ def player_input(event):  # Returns the key that was pushed down
 '''readable, writable, errored = select.select(read_list, [], [])
         for soc in readable:
             if soc is cubix_server:'''
+
+if len(global_var.player_list) != 0:
+    for player in global_var.player_list:
+        if player.object_id == client.player_id:
+            if event.type == pygame.QUIT:
+                player_left(global_var, player, client, client_list)
+            else:
+                manage_pressed_buttons(player, event, global_var)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    player_left(global_var, player, client, client_list)
+        else:
+            if event.type == pygame.QUIT:
+                player_left(global_var, None, client, client_list)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    player_left(global_var, None, client, client_list)
+else:
+    if event.type == pygame.QUIT:
+        player_left(global_var, None, client, client_list)
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_ESCAPE:
+            player_left(global_var, None, client, client_list)

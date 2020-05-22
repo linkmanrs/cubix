@@ -5,6 +5,7 @@ import time
 import pygame
 import threading
 import socket
+import select
 import msgpack
 import sqlite3
 import hashlib
@@ -22,7 +23,7 @@ from global_var import GlobalVariable
 WINDOWS_WIDTH = 1100
 WINDOWS_HEIGHT = 700
 REFRESH_RATE = 60
-MAXIMUM_CLIENTS = 2
+MAXIMUM_CLIENTS = 4
 MINIMUM_PLAYERS = 2
 FINISHED_LOGGING = 4
 SPRITE_FOLDER_ROUTE = '../sprites/'
@@ -45,13 +46,15 @@ MAP1 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [6
 MAP2 = [[300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [0, 400], [1000, 400]]
 MAP3 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600],
         [900, 600], [1000, 600], [0, 400], [100, 400], [900, 400], [1000, 400], [400, 200], [500, 200], [600, 200]]
+MAP4 = [[200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600]]
 MAPS = [MAP0, MAP1, MAP2, MAP3]
 
 # spawn points
 SPAWN_POINT0 = [[0, 0], [150, 0], [300, 0], [450, 0]]
 SPAWN_POINT1 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
 SPAWN_POINT2 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
-SPAWN_POINT3 = [[400, 0], [600, 0], [350, 200], [650, 200]]
+SPAWN_POINT3 = [[400, 0], [600, 0], [350, 400], [650, 400]]
+SPAWN_POINT4 = [[200, 0], [350, 0], [500, 0], [650, 0]]
 SPAWN_POINTS = [SPAWN_POINT0, SPAWN_POINT1, SPAWN_POINT2, SPAWN_POINT3]
 
 
@@ -63,7 +66,6 @@ def main_physical_game(clock, client_list):  # Main physical game
     global_var = GlobalVariable()
 
     map_num = random.randint(0, len(MAPS) - 1)
-    # map_num = 3
 
     make_players(global_var, client_list, map_num)
 
@@ -72,7 +74,7 @@ def main_physical_game(clock, client_list):  # Main physical game
     # Main loop
     finish = False
     while not finish:
-        for client in client_list:
+        for client in client_list[:]:
             event = receive_event(client)
             manage_event(global_var, event, client, client_list)
 
@@ -87,16 +89,17 @@ def main_physical_game(clock, client_list):  # Main physical game
         update_players(global_var)
         update_particles(global_var)
 
-        # Clock tick
-        clock.tick(REFRESH_RATE)
-        for client in client_list:
-            send_status(global_var.status_list, client)
-        global_var.status_list.clear()
-
         if len(global_var.player_list) == 1:  # Ends the game if one player is left alive
             finish = True
             for client in client_list:
                 send_status([['quit']], client)
+
+        # Clock tick
+        clock.tick(REFRESH_RATE)
+        if not finish:
+            for client in client_list:
+                send_status(global_var.status_list, client)
+        global_var.status_list.clear()
         # End of main loop
     return global_var.player_list[0]
     # End main_physical_game
@@ -299,7 +302,6 @@ def check_alive(player):  # Check if the player is alive and returns the answer
 
 
 def death(player, global_var):  # Makes the player die and creates a ghost particle of the player
-    print('zzz')
     pos = player.get_pos()
     ghost = PlayerGhost(pos[0] - 93, pos[1] - 53, global_var.object_id, player.character)
     global_var.object_id += 1
@@ -385,7 +387,6 @@ def update_particles(global_var):  # Function that contains all the necessary up
 def check_delete_ghost(ghost, global_var):  # Deletes the ghost if its off screen
     if ghost.y + ghost.size_y <= 0:
         kill_object(ghost, global_var.particle_list, global_var)
-        print('dead for good')
     # End check_delete_ghost
 
 
@@ -467,12 +468,13 @@ def except_client(client, username_list, _, soc):  # A function that handles the
     accepted, user_id = choose_command_at_enterence(cubix_cursor, soc, username_list)
     cubix_database.commit()
     if accepted:
-        playing = choose_command_after_logged(cubix_cursor, soc, user_id)
         client.user_id = user_id
         client.user_name = cubix_cursor.execute('SELECT username FROM users WHERE ID=?', [user_id]).fetchone()[0]
+        playing = choose_command_after_logged(cubix_cursor, soc, user_id, client.user_name)
         client.playing = playing
         client.accepted = playing
         # wait_for_players(soc)
+    cubix_database.close()
     # End except_client
 
 
@@ -584,7 +586,8 @@ def verify_password(stored_password, salt, provided_password):  # checking if th
     # End verify_password
 
 
-def choose_command_after_logged(cursor, client, user_id):  # Let the user pick the action he wants to do
+def choose_command_after_logged(cursor, client, user_id, username):  # Let the user pick the action he wants to do
+    send_message(username, client)
     command = receive_message(client)
     action = {
         'get status': collect_status,
@@ -644,31 +647,45 @@ def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients
     client_id = 0
     confirmation_count = 0
     username_list = cubix_cursor.execute('SELECT username FROM users').fetchall()
-    while confirmation_count < MAXIMUM_CLIENTS:
-        (client_socket, client_address) = cubix_server.accept()
-        new_client = ClientPlayer(client_id, client_socket, client_address)
-        client_list.append(new_client)
-        client_id += 1
-        new_thread = threading.Thread(target=except_client,
-                                      args=(new_client, username_list, cubix_cursor, client_socket))
-        new_thread.start()
-        thread_list.append(new_thread)
-        confirmation_count += 1
+    start_time = int(time.time())
+    max_time = 30
+    finished_waiting = False
+    read_list = [cubix_server]
+    while confirmation_count < MAXIMUM_CLIENTS and not finished_waiting:
+        readable, writable, errored = select.select(read_list, [], [], 0.5)
+        for s in readable:
+            if s is cubix_server:
+                (client_socket, client_address) = cubix_server.accept()
+                new_client = ClientPlayer(client_id, client_socket, client_address)
+                client_list.append(new_client)
+                client_id += 1
+                new_thread = threading.Thread(target=except_client,
+                                              args=(new_client, username_list, cubix_cursor, client_socket))
+                new_thread.start()
+                thread_list.append(new_thread)
+                confirmation_count += 1
 
-    '''finished = False
-    while not finished:
-        everyone_finished = 0
+        current_time = int(time.time())
+        if current_time - start_time > max_time:
+            finished_waiting = True
+        else:
+            for client in client_list:
+                if client.accepted is not None:
+                    send_message(current_time - start_time, client.client_socket)
+
+    '''finish = False
+    while not finish:
+        finished_clients = 0
+        current_time = int(time.time())
         for client in client_list:
-            if client.playing is not None:
-                everyone_finished += 1
-        if everyone_finished == confirmation_count:
-            for client in client_list[:]:
-                if not client.accepted:
-                    client_list.remove(client)
-                    client.client_socket.close()
-
-            for client in client_list[:]:
-                send_message('done', client.client_socket)'''
+            if client.accepted is not None:
+                finished_clients += 1
+        if finished_clients == len(client_list):
+            finish = True
+        else:
+            for client in client_list:
+                if client.accepted is not None:
+                    send_message(current_time - start_time, client.client_socket)'''
 
     for thread in thread_list:
         thread.join()
@@ -791,7 +808,7 @@ def main():
 
         while num_rounds != 0:
             num_rounds -= 1
-            if len(client_list) >= MINIMUM_PLAYERS:
+            if len(client_list) > 0:
                 new_game_id = cubix_cursor.execute('SELECT max(ID) FROM games').fetchone()[0] + 1
                 date = time.asctime()
 
@@ -822,6 +839,7 @@ def main():
                     SET numgames = ?,
                         wins = ?
                     WHERE ID = ?''', [numgames, wins, client.user_id])
+                cubix_database.commit()
         send_winner(client_list)
     else:
         for client in client_list:

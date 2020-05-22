@@ -37,7 +37,6 @@ class Particle(object):  # Class for every particle object in the game
         self.colorkey = colorkey
         self.state = ''  # A variable for the state of the player (for the animation)
         self.facing_right = True  # Right = True
-        # self.visual = VisualObject(sprite_name, colorkey, x, y)
         # End __init__
 
     def update_loc(self):  # Function for updating location according to speed

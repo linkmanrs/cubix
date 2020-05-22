@@ -33,7 +33,7 @@ def main_visual_game(screen, clock, cubix_client):  # The main game with only vi
     countdown(screen)
     still_playing = True
     visual_list = []  # List of all the visual objects
-    # play_theme()
+    play_theme()
 
     finish = False
     while not finish:
@@ -408,6 +408,7 @@ def try_log(client, screen, clock):  # Trying to log in to the server
 
 
 def choose_command_after_logged(client, screen, clock, is_admin):  # Let the user pick the action he wants to do
+    username = receive_message(client)
     command = ''
     while command == '':
         for event in pygame.event.get():
@@ -418,6 +419,8 @@ def choose_command_after_logged(client, screen, clock, is_admin):  # Let the use
         screen.fill(WHITE)
 
         display_text(screen, "CUBIX", (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2) - 50, True)
+
+        display_text(screen, "Hello " + username + "!", (WINDOWS_WIDTH / 2), (WINDOWS_HEIGHT / 2) + 50, False)
 
         if button(screen, "play game", 220, 500, 100, 50, GREY, LIGHT_GREY):
             command = 'play game'
@@ -542,31 +545,23 @@ def show_log(client, screen, clock):  # Shows the admin the game log
 
 
 def wait_for_players(client, screen, clock):  # A screen for the client to wait for other players
+    max_time = 30
     finish = False
     while not finish:
-        '''for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                finish = True'''
+        message = receive_message(client)
+        if message == 'done':
+            finish = True
 
         screen.fill(WHITE)
 
-        display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, 200, False)
+        if not finish:
+            display_text(screen, 'please wait for other players', WINDOWS_WIDTH / 2, 200, False)
 
-        # display_text(screen, 'click the red x if you want to exit', WINDOWS_WIDTH / 2, 400, False)
+            display_text(screen, 'estimated time: ' + str(max_time - message), WINDOWS_WIDTH / 2, 400, False)
 
         pygame.display.flip()
 
         clock.tick(REFRESH_RATE)
-
-        message = receive_message(client)
-        if message == 'done':
-            # message = receive_message(client)
-            finish = True
-
-        '''if finish:
-            send_message('done', client)
-        else:
-            send_message('waiting', client)'''
     # End wait_for_players
 
 
@@ -710,7 +705,7 @@ def main():
                     message = receive_message(cubix_client)
                     if message == 'The game is ready':
                         playing = True
-                        while num_rounds != 0:
+                        while num_rounds > 0:
                             if playing:
                                 playing = main_visual_game(screen, clock, cubix_client)
                                 num_rounds -= 1

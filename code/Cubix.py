@@ -47,7 +47,9 @@ MAP2 = [[300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [0, 400], [1
 MAP3 = [[0, 600], [100, 600], [200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600],
         [900, 600], [1000, 600], [0, 400], [100, 400], [900, 400], [1000, 400], [400, 200], [500, 200], [600, 200]]
 MAP4 = [[200, 600], [300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [800, 600]]
-MAPS = [MAP0, MAP1, MAP2, MAP3]
+MAP5 = [[300, 600], [400, 600], [500, 600], [600, 600], [700, 600], [0, 400], [1000, 400], [400, 200], [500, 200],
+        [600, 200]]
+MAPS = [MAP0, MAP1, MAP2, MAP3, MAP4, MAP5]
 
 # spawn points
 SPAWN_POINT0 = [[0, 0], [150, 0], [300, 0], [450, 0]]
@@ -55,7 +57,8 @@ SPAWN_POINT1 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
 SPAWN_POINT2 = [[0, 0], [350, 0], [650, 0], [1000, 0]]
 SPAWN_POINT3 = [[400, 0], [600, 0], [350, 400], [650, 400]]
 SPAWN_POINT4 = [[200, 0], [350, 0], [500, 0], [650, 0]]
-SPAWN_POINTS = [SPAWN_POINT0, SPAWN_POINT1, SPAWN_POINT2, SPAWN_POINT3]
+SPAWN_POINT5 = [[400, 0], [600, 0], [350, 400], [650, 400]]
+SPAWN_POINTS = [SPAWN_POINT0, SPAWN_POINT1, SPAWN_POINT2, SPAWN_POINT3, SPAWN_POINT4, SPAWN_POINT5]
 
 
 def main_physical_game(clock, client_list):  # Main physical game
@@ -473,7 +476,6 @@ def except_client(client, username_list, _, soc):  # A function that handles the
         playing = choose_command_after_logged(cubix_cursor, soc, user_id, client.user_name)
         client.playing = playing
         client.accepted = playing
-        # wait_for_players(soc)
     cubix_database.close()
     # End except_client
 
@@ -627,16 +629,6 @@ def game_log(user_id, cubix_cursor, client):  # Shows the admin the game log
     still_playing = receive_message(client)
     return still_playing
     # End game_log
-
-
-def wait_for_players(client):  # A protocol for notifying the client about other players
-    finish = False
-    while not finish:
-        send_message('waiting', client)
-        message = receive_message(client)
-        if message == 'done':
-            finish = True
-    # End wait_for_players
 
 
 def collect_clients(cubix_server, cubix_cursor):  # Collects between 2-4 clients to play the game or view statuses
